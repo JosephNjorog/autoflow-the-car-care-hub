@@ -20,6 +20,7 @@ import CustomerVehicles from "./pages/customer/CustomerVehicles";
 import CustomerLoyalty from "./pages/customer/CustomerLoyalty";
 import CustomerPayments from "./pages/customer/CustomerPayments";
 import CustomerWallet from "./pages/customer/CustomerWallet";
+import CustomerLiveView from "./pages/customer/CustomerLiveView";
 
 // Detailer pages
 import DetailerDashboard from "./pages/detailer/DetailerDashboard";
@@ -35,6 +36,8 @@ import OwnerStaff from "./pages/owner/OwnerStaff";
 import OwnerLocations from "./pages/owner/OwnerLocations";
 import OwnerAnalytics from "./pages/owner/OwnerAnalytics";
 import OwnerPayments from "./pages/owner/OwnerPayments";
+import OwnerAIInsights from "./pages/owner/OwnerAIInsights";
+import OwnerStaking from "./pages/owner/OwnerStaking";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -73,6 +76,7 @@ const App = () => (
           <Route path="/customer/loyalty" element={<CustomerLoyalty />} />
           <Route path="/customer/payments" element={<CustomerPayments />} />
           <Route path="/customer/wallet" element={<CustomerWallet />} />
+          <Route path="/customer/live" element={<CustomerLiveView />} />
           <Route path="/customer/settings" element={<SettingsPage role="customer" userName="James Mwangi" />} />
           <Route path="/customer/notifications" element={<NotificationPreferences role="customer" userName="James Mwangi" />} />
 
@@ -92,6 +96,8 @@ const App = () => (
           <Route path="/owner/locations" element={<OwnerLocations />} />
           <Route path="/owner/analytics" element={<OwnerAnalytics />} />
           <Route path="/owner/payments" element={<OwnerPayments />} />
+          <Route path="/owner/ai-insights" element={<OwnerAIInsights />} />
+          <Route path="/owner/staking" element={<OwnerStaking />} />
           <Route path="/owner/settings" element={<SettingsPage role="owner" userName="David Kamau" />} />
           <Route path="/owner/notifications" element={<NotificationPreferences role="owner" userName="David Kamau" />} />
 

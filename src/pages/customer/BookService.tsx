@@ -134,11 +134,19 @@ export default function BookService() {
             <p className="text-sm text-muted-foreground">Date: <span className="text-foreground font-medium">{selectedDate} at {selectedTime}</span></p>
             <div className="pt-2 border-t border-border">
               <p className="font-display text-xl text-foreground">KES {mockServices.find(s => s.id === selectedService)?.price.toLocaleString()}</p>
+              {(paymentMethod === 'usdt' || paymentMethod === 'crypto') && (
+                <div className="mt-2 p-2 rounded-lg bg-accent/5 border border-accent/10">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <span className="font-medium text-foreground">≈ {((mockServices.find(s => s.id === selectedService)?.price || 0) / 129.05).toFixed(2)} {paymentMethod === 'usdt' ? 'USDT' : 'USDC'}</span>
+                    <span className="text-[10px]">• Rate via Chainlink: 1 USD = 129.05 KES</span>
+                  </p>
+                </div>
+              )}
             </div>
           </div>
           <div className="space-y-3">
             <Label>Payment Method</Label>
-            {[{ id: 'mpesa', label: 'M-Pesa', desc: 'Pay via STK Push' }, { id: 'crypto', label: 'Crypto', desc: 'USDC on Avalanche' }].map((m) => (
+            {[{ id: 'mpesa', label: 'M-Pesa', desc: 'Pay via STK Push' }, { id: 'usdt', label: 'USDT (Tether)', desc: 'Pay with USDT on Avalanche via Tether WDK' }, { id: 'crypto', label: 'USDC', desc: 'USDC stablecoin on Avalanche' }].map((m) => (
               <button key={m.id} onClick={() => setPaymentMethod(m.id)}
                 className={`w-full flex items-center gap-3 p-4 rounded-xl border transition-all ${paymentMethod === m.id ? 'border-primary bg-primary/5' : 'border-border bg-card'}`}>
                 <div className={`w-4 h-4 rounded-full border-2 ${paymentMethod === m.id ? 'border-primary bg-primary' : 'border-border'}`} />

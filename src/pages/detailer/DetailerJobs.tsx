@@ -3,7 +3,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { PageHeader, StatusBadge } from '@/components/shared/SharedComponents';
 import { mockBookings } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
-import { Camera } from 'lucide-react';
+import { Camera, Video } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function DetailerJobs() {
@@ -38,6 +38,7 @@ export default function DetailerJobs() {
                 {b.status === 'in_progress' && (
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={() => toast({ title: 'Upload Photos', description: 'Photo upload dialog would open here.' })}><Camera className="w-3 h-3 mr-1" /> Photos</Button>
+                    <Button size="sm" variant="outline" onClick={() => toast({ title: 'Live Stream Started', description: 'Agora live video stream initiated for customer.' })}><Video className="w-3 h-3 mr-1" /> Go Live</Button>
                     <Button size="sm" onClick={() => toast({ title: 'Job Completed', description: `${b.serviceName} for ${b.customerName} marked as complete.` })}>Complete</Button>
                   </div>
                 )}

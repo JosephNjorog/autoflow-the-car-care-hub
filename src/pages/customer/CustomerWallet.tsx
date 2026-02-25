@@ -2,8 +2,20 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { PageHeader } from '@/components/shared/SharedComponents';
 import { Wallet, Copy, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 export default function CustomerWallet() {
+  const { toast } = useToast();
+
+  const copyAddress = () => {
+    navigator.clipboard.writeText('0x1234567890abcdef1234567890abcdef12345678');
+    toast({ title: 'Copied', description: 'Wallet address copied to clipboard.' });
+  };
+
+  const handleConnect = (name: string) => {
+    toast({ title: 'Connecting...', description: `Opening ${name} connection dialog.` });
+  };
+
   return (
     <DashboardLayout role="customer" userName="James Mwangi">
       <PageHeader title="Crypto Wallet" subtitle="Manage your wallet connection for stablecoin payments" />
@@ -20,7 +32,7 @@ export default function CustomerWallet() {
           </div>
           <div className="p-3 rounded-lg bg-muted flex items-center justify-between mb-4">
             <code className="text-sm text-foreground">0x1234...5678</code>
-            <button className="text-muted-foreground hover:text-foreground"><Copy className="w-4 h-4" /></button>
+            <button onClick={copyAddress} className="text-muted-foreground hover:text-foreground"><Copy className="w-4 h-4" /></button>
           </div>
           <div className="space-y-3">
             <div className="flex items-center justify-between py-2">
@@ -37,8 +49,8 @@ export default function CustomerWallet() {
             </div>
           </div>
           <div className="flex gap-3 mt-6">
-            <Button variant="outline" size="sm" className="flex-1"><ExternalLink className="w-3 h-3 mr-1" /> View on Explorer</Button>
-            <Button variant="outline" size="sm" className="flex-1 text-destructive border-destructive/20 hover:bg-destructive/10">Disconnect</Button>
+            <Button variant="outline" size="sm" className="flex-1" onClick={() => window.open('https://snowtrace.io', '_blank')}><ExternalLink className="w-3 h-3 mr-1" /> View on Explorer</Button>
+            <Button variant="outline" size="sm" className="flex-1 text-destructive border-destructive/20 hover:bg-destructive/10" onClick={() => toast({ title: 'Wallet Disconnected', description: 'Your wallet has been disconnected.' })}>Disconnect</Button>
           </div>
         </div>
 
@@ -63,7 +75,7 @@ export default function CustomerWallet() {
                 {w.connected ? (
                   <span className="text-xs font-medium text-success">Connected</span>
                 ) : (
-                  <Button variant="outline" size="sm">Connect</Button>
+                  <Button variant="outline" size="sm" onClick={() => handleConnect(w.name)}>Connect</Button>
                 )}
               </div>
             ))}

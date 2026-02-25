@@ -46,7 +46,7 @@ export interface Location {
 
 export type BookingStatus = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
-export type PaymentMethod = 'mpesa' | 'crypto' | 'card';
+export type PaymentMethod = 'mpesa' | 'crypto' | 'card' | 'cash';
 
 export interface Booking {
   id: string;
@@ -80,6 +80,9 @@ export interface Transaction {
   method: PaymentMethod;
   status: PaymentStatus;
   mpesaCode?: string;
+  cryptoTxHash?: string;
+  cryptoToken?: string;
+  cryptoNetwork?: string;
   customerName: string;
   date: string;
 }

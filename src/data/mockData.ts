@@ -51,6 +51,13 @@ export const mockTransactions: Transaction[] = [
   { id: 't4', bookingId: 'b5', amount: 2000, method: 'mpesa', status: 'completed', mpesaCode: 'RTY2M5V9J3', customerName: 'Grace Wanjiku', date: '2026-02-18' },
   { id: 't5', bookingId: 'b6', amount: 500, method: 'mpesa', status: 'completed', mpesaCode: 'PLK8N1C4H6', customerName: 'James Mwangi', date: '2026-02-14' },
   { id: 't6', bookingId: 'b8', amount: 1500, method: 'mpesa', status: 'completed', mpesaCode: 'WQZ3T7F9A1', customerName: 'James Mwangi', date: '2026-02-08' },
+  { id: 't7', bookingId: 'b3', amount: 15000, method: 'crypto', status: 'pending', customerName: 'James Mwangi', date: '2026-02-25', cryptoTxHash: '0xabc123...def456', cryptoToken: 'USDC', cryptoNetwork: 'Avalanche C-Chain' },
+  { id: 't8', bookingId: 'b7', amount: 2500, method: 'cash', status: 'completed', customerName: 'Kevin Otieno', date: '2026-02-25' },
+  { id: 't9', bookingId: '', amount: 4500, method: 'crypto', status: 'completed', customerName: 'Grace Wanjiku', date: '2026-02-21', cryptoTxHash: '0x789abc...123def', cryptoToken: 'USDT', cryptoNetwork: 'Avalanche C-Chain' },
+  { id: 't10', bookingId: '', amount: 800, method: 'cash', status: 'completed', customerName: 'Kevin Otieno', date: '2026-02-19' },
+  { id: 't11', bookingId: '', amount: 3500, method: 'card', status: 'completed', customerName: 'James Mwangi', date: '2026-02-17' },
+  { id: 't12', bookingId: '', amount: 12000, method: 'crypto', status: 'failed', customerName: 'Grace Wanjiku', date: '2026-02-16', cryptoTxHash: '0xfail...0000', cryptoToken: 'USDC', cryptoNetwork: 'Avalanche C-Chain' },
+  { id: 't13', bookingId: '', amount: 1000, method: 'cash', status: 'completed', customerName: 'James Mwangi', date: '2026-02-12' },
 ];
 
 export const mockNotifications: Notification[] = [

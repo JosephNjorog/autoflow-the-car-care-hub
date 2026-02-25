@@ -1,10 +1,13 @@
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { PageHeader, StatusBadge } from '@/components/shared/SharedComponents';
+import { PageHeader } from '@/components/shared/SharedComponents';
 import { mockServices } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, X } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminServices() {
+  const { toast } = useToast();
+
   return (
     <DashboardLayout role="admin" userName="Sarah Njeri">
       <PageHeader title="Services" subtitle="Review and approve services" />
@@ -29,8 +32,8 @@ export default function AdminServices() {
                   <td className="p-4"><span className={`text-xs font-medium ${s.isActive ? 'text-success' : 'text-warning'}`}>{s.isActive ? 'Active' : 'Pending'}</span></td>
                   <td className="p-4 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="sm" className="text-success"><CheckCircle className="w-3 h-3" /></Button>
-                      <Button variant="ghost" size="sm" className="text-destructive"><X className="w-3 h-3" /></Button>
+                      <Button variant="ghost" size="sm" className="text-success" onClick={() => toast({ title: 'Service Approved', description: `${s.name} has been approved.` })}><CheckCircle className="w-3 h-3" /></Button>
+                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => toast({ title: 'Service Rejected', description: `${s.name} has been rejected.` })}><X className="w-3 h-3" /></Button>
                     </div>
                   </td>
                 </tr>

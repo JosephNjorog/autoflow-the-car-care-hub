@@ -5,9 +5,11 @@ import { mockDetailerSchedule, dayNames } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
 
 export default function DetailerSchedule() {
   const [schedule, setSchedule] = useState(mockDetailerSchedule);
+  const { toast } = useToast();
 
   const toggleDay = (idx: number) => {
     const updated = [...schedule];
@@ -17,7 +19,7 @@ export default function DetailerSchedule() {
 
   return (
     <DashboardLayout role="detailer" userName="Peter Ochieng">
-      <PageHeader title="My Schedule" subtitle="Set your weekly availability" action={<Button size="sm">Save Changes</Button>} />
+      <PageHeader title="My Schedule" subtitle="Set your weekly availability" action={<Button size="sm" onClick={() => toast({ title: 'Schedule Saved', description: 'Your availability has been updated.' })}>Save Changes</Button>} />
       <div className="max-w-lg space-y-3">
         {schedule.map((s, i) => (
           <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-card border border-border">

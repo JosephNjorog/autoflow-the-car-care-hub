@@ -45,8 +45,60 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section className="gradient-hero">
-        <div className="max-w-7xl mx-auto px-4 md:px-8 pt-20 pb-24 md:pt-32 md:pb-36">
+      <section className="relative overflow-hidden gradient-hero">
+        {/* Animated floating bubbles */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {[
+            { size: 320, x: '10%', y: '-10%', delay: 0, duration: 18 },
+            { size: 240, x: '75%', y: '5%', delay: 2, duration: 22 },
+            { size: 180, x: '50%', y: '60%', delay: 4, duration: 16 },
+            { size: 140, x: '85%', y: '50%', delay: 1, duration: 20 },
+            { size: 100, x: '20%', y: '70%', delay: 3, duration: 14 },
+            { size: 260, x: '-5%', y: '40%', delay: 5, duration: 24 },
+          ].map((b, i) => (
+            <motion.div
+              key={i}
+              className="absolute rounded-full"
+              style={{
+                width: b.size,
+                height: b.size,
+                left: b.x,
+                top: b.y,
+                background: i % 2 === 0
+                  ? 'radial-gradient(circle, hsl(152 35% 25% / 0.08), hsl(152 35% 25% / 0.02))'
+                  : 'radial-gradient(circle, hsl(36 80% 55% / 0.1), hsl(36 80% 55% / 0.02))',
+                filter: 'blur(40px)',
+              }}
+              animate={{
+                y: [0, -30, 10, -20, 0],
+                x: [0, 15, -10, 20, 0],
+                scale: [1, 1.1, 0.95, 1.05, 1],
+              }}
+              transition={{
+                duration: b.duration,
+                delay: b.delay,
+                repeat: Infinity,
+                ease: 'easeInOut',
+              }}
+            />
+          ))}
+          {/* Subtle grid pattern */}
+          <div className="absolute inset-0 opacity-[0.03]" style={{
+            backgroundImage: 'radial-gradient(circle at 1px 1px, hsl(152 35% 25%) 1px, transparent 0)',
+            backgroundSize: '40px 40px',
+          }} />
+          {/* Diagonal shine sweep */}
+          <motion.div
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(105deg, transparent 40%, hsl(36 80% 55% / 0.06) 45%, transparent 50%)',
+            }}
+            animate={{ x: ['-100%', '200%'] }}
+            transition={{ duration: 6, repeat: Infinity, repeatDelay: 8, ease: 'easeInOut' }}
+          />
+        </div>
+
+        <div className="relative max-w-7xl mx-auto px-4 md:px-8 pt-20 pb-24 md:pt-32 md:pb-36">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

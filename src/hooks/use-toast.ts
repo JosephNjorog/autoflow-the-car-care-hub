@@ -2,8 +2,8 @@ import * as React from "react";
 
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
 
-const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 1000000;
+const TOAST_LIMIT = 3;
+const TOAST_REMOVE_DELAY = 5000;
 
 type ToasterToast = ToastProps & {
   id: string;
@@ -134,6 +134,16 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">;
 
+function inferVariant(title?: React.ReactNode): "default" | "destructive" | "success" | "warning" | "info" {
+  if (!title || typeof title !== 'string') return 'default';
+  const t = title.toLowerCase();
+  if (/removed|deleted|failed|error|rejected|disconnected/.test(t)) return 'destructive';
+  if (/approved|created|updated|saved|added|enabled|completed|connected|sent|registered|verified|started|uploaded/.test(t)) return 'success';
+  if (/warning|disabled|pending|expired/.test(t)) return 'warning';
+  if (/info|edit|connecting|opening|detecting|loading|processing/.test(t)) return 'info';
+  return 'default';
+}
+
 function toast({ ...props }: Toast) {
   const id = genId();
 
@@ -144,10 +154,13 @@ function toast({ ...props }: Toast) {
     });
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id });
 
+  const resolvedVariant = props.variant || inferVariant(props.title);
+
   dispatch({
     type: "ADD_TOAST",
     toast: {
       ...props,
+      variant: resolvedVariant as any,
       id,
       open: true,
       onOpenChange: (open) => {

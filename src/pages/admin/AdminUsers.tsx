@@ -2,9 +2,12 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { PageHeader } from '@/components/shared/SharedComponents';
 import { mockUsers } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, Mail, Phone } from 'lucide-react';
+import { Edit, Trash2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminUsers() {
+  const { toast } = useToast();
+
   return (
     <DashboardLayout role="admin" userName="Sarah Njeri">
       <PageHeader title="User Management" subtitle="Manage all users in the system" />
@@ -36,8 +39,8 @@ export default function AdminUsers() {
                   <td className="p-4"><span className={`text-xs font-medium ${u.isVerified ? 'text-success' : 'text-warning'}`}>{u.isVerified ? 'Verified' : 'Pending'}</span></td>
                   <td className="p-4 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="sm"><Edit className="w-3 h-3" /></Button>
-                      <Button variant="ghost" size="sm" className="text-destructive"><Trash2 className="w-3 h-3" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => toast({ title: 'Edit User', description: `Editing ${u.name}'s profile.` })}><Edit className="w-3 h-3" /></Button>
+                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => toast({ title: 'User Removed', description: `${u.name} has been removed.`, variant: 'destructive' })}><Trash2 className="w-3 h-3" /></Button>
                     </div>
                   </td>
                 </tr>

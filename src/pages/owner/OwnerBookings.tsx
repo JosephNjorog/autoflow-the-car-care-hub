@@ -5,9 +5,11 @@ import { mockBookings, mockUsers } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 
 export default function OwnerBookings() {
   const [filter, setFilter] = useState('all');
+  const { toast } = useToast();
   const bookings = mockBookings
     .filter(b => filter === 'all' || b.status === filter)
     .sort((a, b) => b.date.localeCompare(a.date));
@@ -47,7 +49,7 @@ export default function OwnerBookings() {
                             {detailers.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
-                        <Button className="w-full">Assign Detailer</Button>
+                        <Button className="w-full" onClick={() => toast({ title: 'Detailer Assigned', description: `Detailer has been assigned to ${b.serviceName}.` })}>Assign Detailer</Button>
                       </div>
                     </DialogContent>
                   </Dialog>

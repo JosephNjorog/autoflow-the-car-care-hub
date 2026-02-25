@@ -7,10 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Car, Plus, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 
 export default function CustomerVehicles() {
   const vehicles = mockVehicles.filter(v => v.customerId === 'u1');
   const [open, setOpen] = useState(false);
+  const { toast } = useToast();
 
   return (
     <DashboardLayout role="customer" userName="James Mwangi">
@@ -30,7 +32,7 @@ export default function CustomerVehicles() {
                   <div className="space-y-2"><Label>Color</Label><Input placeholder="White" /></div>
                 </div>
                 <div className="space-y-2"><Label>License Plate</Label><Input placeholder="KDA 123A" /></div>
-                <Button className="w-full" onClick={() => setOpen(false)}>Add Vehicle</Button>
+                <Button className="w-full" onClick={() => { setOpen(false); toast({ title: 'Vehicle Added', description: 'New vehicle has been registered.' }); }}>Add Vehicle</Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -41,7 +43,7 @@ export default function CustomerVehicles() {
           <div key={v.id} className="p-5 rounded-xl bg-card border border-border shadow-card">
             <div className="flex items-start justify-between mb-3">
               <div className="p-2.5 rounded-lg bg-primary/10"><Car className="w-5 h-5 text-primary" /></div>
-              <button className="text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="w-4 h-4" /></button>
+              <button onClick={() => toast({ title: 'Vehicle Removed', description: `${v.make} ${v.model} has been removed.`, variant: 'destructive' })} className="text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="w-4 h-4" /></button>
             </div>
             <p className="font-display text-lg text-foreground">{v.make} {v.model}</p>
             <p className="text-sm text-muted-foreground">{v.year} · {v.color}</p>

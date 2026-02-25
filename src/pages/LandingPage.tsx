@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Droplets, Star, Shield, Smartphone, Zap, Users, ArrowRight, CheckCircle, Wallet, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const features = [
   { icon: <Smartphone className="w-6 h-6" />, title: 'Book in 2 Taps', desc: 'Quick mobile-first booking experience built for Kenya.' },
@@ -35,7 +36,8 @@ export default function LandingPage() {
             <a href="#how-it-works" className="hover:text-foreground transition-colors">How it Works</a>
             <a href="#cta" className="hover:text-foreground transition-colors">Get Started</a>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
             <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>Sign in</Button>
             <Button size="sm" onClick={() => navigate('/register')}>
               Get Started <ArrowRight className="w-4 h-4 ml-1" />
@@ -55,7 +57,7 @@ export default function LandingPage() {
             loading="eager"
           />
           {/* Dark overlay for readability */}
-          <div className="absolute inset-0 bg-gradient-to-b from-background/85 via-background/70 to-background" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/85 via-background/70 to-background dark:from-background/90 dark:via-background/80 dark:to-background" />
           {/* Accent glow */}
           <motion.div
             className="absolute inset-0 opacity-30"

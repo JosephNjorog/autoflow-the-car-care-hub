@@ -45,6 +45,7 @@ import AdminApprovals from "./pages/admin/AdminApprovals";
 
 // Shared
 import SettingsPage from "./pages/SettingsPage";
+import NotificationPreferences from "./pages/NotificationPreferences";
 
 const queryClient = new QueryClient();
 
@@ -70,6 +71,7 @@ const App = () => (
           <Route path="/customer/payments" element={<CustomerPayments />} />
           <Route path="/customer/wallet" element={<CustomerWallet />} />
           <Route path="/customer/settings" element={<SettingsPage role="customer" userName="James Mwangi" />} />
+          <Route path="/customer/notifications" element={<NotificationPreferences role="customer" userName="James Mwangi" />} />
 
           {/* Detailer */}
           <Route path="/detailer" element={<DetailerDashboard />} />
@@ -77,6 +79,7 @@ const App = () => (
           <Route path="/detailer/schedule" element={<DetailerSchedule />} />
           <Route path="/detailer/earnings" element={<DetailerEarnings />} />
           <Route path="/detailer/settings" element={<SettingsPage role="detailer" userName="Peter Ochieng" />} />
+          <Route path="/detailer/notifications" element={<NotificationPreferences role="detailer" userName="Peter Ochieng" />} />
 
           {/* Owner */}
           <Route path="/owner" element={<OwnerDashboard />} />
@@ -87,6 +90,7 @@ const App = () => (
           <Route path="/owner/analytics" element={<OwnerAnalytics />} />
           <Route path="/owner/payments" element={<OwnerPayments />} />
           <Route path="/owner/settings" element={<SettingsPage role="owner" userName="David Kamau" />} />
+          <Route path="/owner/notifications" element={<NotificationPreferences role="owner" userName="David Kamau" />} />
 
           {/* Admin */}
           <Route path="/admin" element={<AdminDashboard />} />
@@ -96,6 +100,7 @@ const App = () => (
           <Route path="/admin/services" element={<AdminServices />} />
           <Route path="/admin/approvals" element={<AdminApprovals />} />
           <Route path="/admin/settings" element={<SettingsPage role="admin" userName="Sarah Njeri" />} />
+          <Route path="/admin/notifications" element={<NotificationPreferences role="admin" userName="Sarah Njeri" />} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -4,11 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Calendar, Car, Star, CreditCard, Users, Settings, LogOut,
   Menu, X, Bell, ChevronDown, Briefcase, Clock, DollarSign, MapPin,
-  BarChart3, Shield, CheckCircle, FileText, Wallet, Droplets
+  BarChart3, Shield, CheckCircle, FileText, Wallet, Droplets, BellRing, Check
 } from 'lucide-react';
-import { mockNotifications } from '@/data/mockData';
-import { UserRole } from '@/types';
+import { mockNotifications as initialNotifications } from '@/data/mockData';
+import { UserRole, Notification } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface NavItem {
   label: string;
@@ -58,6 +59,13 @@ const roleLabels: Record<UserRole, string> = {
   admin: 'Super Admin',
 };
 
+const notifTypeIcons: Record<string, ReactNode> = {
+  booking: <Calendar className="w-3.5 h-3.5" />,
+  payment: <CreditCard className="w-3.5 h-3.5" />,
+  review: <Star className="w-3.5 h-3.5" />,
+  system: <Shield className="w-3.5 h-3.5" />,
+};
+
 interface DashboardLayoutProps {
   children: ReactNode;
   role: UserRole;
@@ -67,10 +75,28 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children, role, userName = 'User' }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
   const location = useLocation();
   const navigate = useNavigate();
   const items = navItems[role];
-  const unreadCount = mockNotifications.filter(n => !n.isRead).length;
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  const markAsRead = (id: string) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+  };
+
+  const markAllAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+  };
+
+  const getTimeAgo = (dateStr: string) => {
+    const diff = new Date('2026-02-25T12:00:00').getTime() - new Date(dateStr).getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    if (hours < 1) return 'Just now';
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -132,7 +158,11 @@ export default function DashboardLayout({ children, role, userName = 'User' }: D
 
           {/* Footer */}
           <div className="p-3 border-t border-sidebar-border space-y-1">
-            <Link to={`/${role}/settings`} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
+            <Link to={`/${role}/notifications`} onClick={() => setSidebarOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
+              <BellRing className="w-5 h-5" />
+              Notification Settings
+            </Link>
+            <Link to={`/${role}/settings`} onClick={() => setSidebarOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
               <Settings className="w-5 h-5" />
               Settings
             </Link>
@@ -169,24 +199,60 @@ export default function DashboardLayout({ children, role, userName = 'User' }: D
               </button>
               <AnimatePresence>
                 {notifOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
-                    className="absolute right-0 top-12 w-80 bg-card border border-border rounded-xl shadow-card-hover overflow-hidden z-50"
-                  >
-                    <div className="p-4 border-b border-border">
-                      <h3 className="font-display text-sm">Notifications</h3>
-                    </div>
-                    <div className="max-h-64 overflow-y-auto">
-                      {mockNotifications.slice(0, 5).map((n) => (
-                        <div key={n.id} className={`p-3 border-b border-border last:border-0 ${!n.isRead ? 'bg-muted/50' : ''}`}>
-                          <p className="text-sm font-medium text-foreground">{n.title}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">{n.message}</p>
+                  <>
+                    {/* Backdrop to close */}
+                    <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -5 }}
+                      className="absolute right-0 top-12 w-80 sm:w-96 bg-card border border-border rounded-xl shadow-card-hover overflow-hidden z-50"
+                    >
+                      <div className="p-4 border-b border-border flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-display text-sm">Notifications</h3>
+                          {unreadCount > 0 && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-accent text-accent-foreground text-[10px] font-bold">{unreadCount}</span>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  </motion.div>
+                        <div className="flex items-center gap-2">
+                          {unreadCount > 0 && (
+                            <button onClick={markAllAsRead} className="text-xs text-primary hover:underline">Mark all read</button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="max-h-80 overflow-y-auto">
+                        {notifications.length === 0 ? (
+                          <div className="py-8 text-center text-sm text-muted-foreground">No notifications</div>
+                        ) : notifications.map((n) => (
+                          <button
+                            key={n.id}
+                            onClick={() => markAsRead(n.id)}
+                            className={`w-full text-left p-3 border-b border-border last:border-0 hover:bg-muted/30 transition-colors ${!n.isRead ? 'bg-muted/50' : ''}`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`p-1.5 rounded-lg mt-0.5 ${!n.isRead ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                                {notifTypeIcons[n.type] || <Bell className="w-3.5 h-3.5" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className={`text-sm font-medium truncate ${!n.isRead ? 'text-foreground' : 'text-muted-foreground'}`}>{n.title}</p>
+                                  {!n.isRead && <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+                                <p className="text-[10px] text-muted-foreground/60 mt-1">{getTimeAgo(n.createdAt)}</p>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="p-3 border-t border-border">
+                        <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => { setNotifOpen(false); navigate(`/${role}/notifications`); }}>
+                          <Settings className="w-3 h-3 mr-1" /> Notification Preferences
+                        </Button>
+                      </div>
+                    </motion.div>
+                  </>
                 )}
               </AnimatePresence>
             </div>

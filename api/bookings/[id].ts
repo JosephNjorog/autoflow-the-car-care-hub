@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql, rawSql } from '../_lib/db';
 import { requireAuth } from '../_lib/auth';
 import { handleCors } from '../_lib/cors';
+import { sendBookingStatusEmail } from '../_lib/email';
 
 const BOOKING_QUERY = `
   SELECT

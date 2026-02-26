@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '../_lib/db';
 import { requireRole } from '../_lib/auth';
 import { handleCors } from '../_lib/cors';
+import { sendOwnerApprovedEmail, sendOwnerRejectedEmail } from '../_lib/email';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
@@ -49,6 +50,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       INSERT INTO notifications (user_id, title, message, type)
       VALUES (${userId}, ${action === 'approve' ? 'Account Approved' : 'Account Rejected'}, ${message}, 'system')
     `;
+
+    // Send approval/rejection email non-blocking
+    if (action === 'approve') {
+      sendOwnerApprovedEmail(user.email as string, user.first_name as string)
+        .catch((err: unknown) => console.error('Owner approved email failed:', err));
+    } else {
+      sendOwnerRejectedEmail(user.email as string, user.first_name as string)
+        .catch((err: unknown) => console.error('Owner rejected email failed:', err));
+    }
 
     return res.status(200).json({ message: `User ${action}d successfully` });
   }

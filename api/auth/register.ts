@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { sql } from '../_lib/db';
 import { generateToken } from '../_lib/auth';
 import { handleCors } from '../_lib/cors';
+import { sendWelcomeEmail, sendOwnerPendingEmail } from '../_lib/email';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
@@ -54,12 +55,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     VALUES (${user.id}, 'Welcome to AutoFlow!', 'Your account has been created successfully. Book your first car wash today!', 'system')
   `;
 
+  // Send emails non-blocking
   if (approvalStatus === 'pending') {
+    sendOwnerPendingEmail(user.email as string, user.first_name as string)
+      .catch((err: unknown) => console.error('Owner pending email failed:', err));
     return res.status(201).json({
       message: 'Account created. Awaiting admin approval before you can access your dashboard.',
       requiresApproval: true,
     });
   }
+
+  sendWelcomeEmail(user.email as string, user.first_name as string, role as 'customer' | 'detailer' | 'owner')
+    .catch((err: unknown) => console.error('Welcome email failed:', err));
 
   const token = generateToken({ userId: user.id, role: user.role, email: user.email });
 

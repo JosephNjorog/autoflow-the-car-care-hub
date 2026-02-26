@@ -6,32 +6,66 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { api } from '@/lib/api';
 
 export default function ForgotPasswordPage() {
   const [step, setStep] = useState<'email' | 'otp' | 'reset' | 'done'>('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSendOTP = (e: React.FormEvent) => {
+  const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({ title: 'OTP Sent', description: `A verification code has been sent to ${email}` });
-    setStep('otp');
+    setLoading(true);
+    try {
+      await api.post('/auth/forgot-password', { email });
+      toast({ title: 'OTP Sent', description: `A verification code has been sent to ${email}` });
+      setStep('otp');
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to send OTP', variant: 'destructive' });
+    } finally { setLoading(false); }
   };
 
-  const handleVerifyOTP = (e: React.FormEvent) => {
+  const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp.length >= 4) {
+    if (otp.length < 4) return;
+    setLoading(true);
+    try {
+      await api.post('/auth/verify-otp', { email, otp });
       toast({ title: 'OTP Verified', description: 'Please set your new password.' });
       setStep('reset');
-    }
+    } catch (err) {
+      toast({ title: 'Invalid Code', description: err instanceof Error ? err.message : 'Please check the code and try again.', variant: 'destructive' });
+    } finally { setLoading(false); }
   };
 
-  const handleReset = (e: React.FormEvent) => {
+  const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({ title: 'Password Reset', description: 'Your password has been updated successfully.' });
-    setStep('done');
+    if (newPassword !== confirmPassword) {
+      toast({ title: 'Passwords do not match', description: 'Please ensure both passwords match.', variant: 'destructive' });
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post('/auth/reset-password', { email, otp, newPassword });
+      toast({ title: 'Password Reset', description: 'Your password has been updated successfully.' });
+      setStep('done');
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to reset password', variant: 'destructive' });
+    } finally { setLoading(false); }
+  };
+
+  const handleResend = async () => {
+    try {
+      await api.post('/auth/forgot-password', { email });
+      toast({ title: 'Code Resent', description: `A new code has been sent to ${email}` });
+    } catch {
+      toast({ title: 'Error', description: 'Failed to resend code', variant: 'destructive' });
+    }
   };
 
   return (
@@ -80,7 +114,7 @@ export default function ForgotPasswordPage() {
                     <Label>Email Address</Label>
                     <Input type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required />
                   </div>
-                  <Button type="submit" className="w-full">Send Verification Code</Button>
+                  <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Sending...' : 'Send Verification Code'}</Button>
                 </form>
               )}
 
@@ -90,8 +124,8 @@ export default function ForgotPasswordPage() {
                     <Label>Verification Code</Label>
                     <Input placeholder="123456" maxLength={6} value={otp} onChange={e => setOtp(e.target.value)} required className="text-center text-lg tracking-widest" />
                   </div>
-                  <Button type="submit" className="w-full" disabled={otp.length < 4}>Verify Code</Button>
-                  <button type="button" onClick={() => toast({ title: 'Code Resent', description: `A new code has been sent to ${email}` })} className="text-sm text-primary hover:underline w-full text-center">
+                  <Button type="submit" className="w-full" disabled={otp.length < 4 || loading}>{loading ? 'Verifying...' : 'Verify Code'}</Button>
+                  <button type="button" onClick={handleResend} className="text-sm text-primary hover:underline w-full text-center">
                     Resend Code
                   </button>
                 </form>
@@ -99,9 +133,15 @@ export default function ForgotPasswordPage() {
 
               {step === 'reset' && (
                 <form onSubmit={handleReset} className="space-y-4">
-                  <div className="space-y-2"><Label>New Password</Label><Input type="password" placeholder="••••••••" required /></div>
-                  <div className="space-y-2"><Label>Confirm Password</Label><Input type="password" placeholder="••••••••" required /></div>
-                  <Button type="submit" className="w-full">Reset Password</Button>
+                  <div className="space-y-2">
+                    <Label>New Password</Label>
+                    <Input type="password" placeholder="••••••••" value={newPassword} onChange={e => setNewPassword(e.target.value)} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Confirm Password</Label>
+                    <Input type="password" placeholder="••••••••" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Resetting...' : 'Reset Password'}</Button>
                 </form>
               )}
             </>

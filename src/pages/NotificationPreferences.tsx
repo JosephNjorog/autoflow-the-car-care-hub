@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Bell, Calendar, CreditCard, MessageSquare, Star, Shield, Smartphone, Mail } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { api } from '@/lib/api';
 
 interface NotifPref {
   id: string;
@@ -28,21 +29,31 @@ const defaultPrefs: NotifPref[] = [
   { id: 'system_updates', label: 'System Updates', description: 'Platform updates and announcements', icon: <Shield className="w-4 h-4" />, inApp: true, email: true, push: false },
 ];
 
-interface NotificationPreferencesProps {
-  role: 'customer' | 'detailer' | 'owner' | 'admin';
-  userName: string;
-}
-
-export default function NotificationPreferences({ role, userName }: NotificationPreferencesProps) {
+export default function NotificationPreferences() {
   const [prefs, setPrefs] = useState(defaultPrefs);
+  const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
   const togglePref = (id: string, channel: 'inApp' | 'email' | 'push') => {
     setPrefs(prev => prev.map(p => p.id === id ? { ...p, [channel]: !p[channel] } : p));
   };
 
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const preferences = prefs.reduce((acc, p) => {
+        acc[p.id] = { inApp: p.inApp, email: p.email, push: p.push };
+        return acc;
+      }, {} as Record<string, { inApp: boolean; email: boolean; push: boolean }>);
+      await api.post('/notifications/preferences', { preferences });
+      toast({ title: 'Preferences Saved', description: 'Your notification preferences have been updated.' });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to save preferences', variant: 'destructive' });
+    } finally { setSaving(false); }
+  };
+
   return (
-    <DashboardLayout role={role} userName={userName}>
+    <DashboardLayout>
       <PageHeader title="Notification Preferences" subtitle="Choose how and when you receive notifications" />
 
       <div className="max-w-3xl space-y-6">
@@ -98,15 +109,17 @@ export default function NotificationPreferences({ role, userName }: Notification
                 <p className="text-xs text-muted-foreground">Allow AutoFlow to send you push notifications</p>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={() => toast({ title: 'Push Notifications', description: 'Browser notification permission requested.' })}>
+            <Button variant="outline" size="sm" onClick={() => {
+              Notification.requestPermission().then(perm => {
+                toast({ title: perm === 'granted' ? 'Push Enabled' : 'Push Denied', description: perm === 'granted' ? 'You will now receive push notifications.' : 'Push notifications were not enabled.' });
+              });
+            }}>
               Enable Push
             </Button>
           </div>
         </div>
 
-        <Button onClick={() => toast({ title: 'Preferences Saved', description: 'Your notification preferences have been updated.' })}>
-          Save Preferences
-        </Button>
+        <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save Preferences'}</Button>
       </div>
     </DashboardLayout>
   );

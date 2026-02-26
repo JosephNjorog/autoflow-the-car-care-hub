@@ -1,15 +1,43 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { PageHeader } from '@/components/shared/SharedComponents';
-import { mockDetailerSchedule, dayNames } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { api } from '@/lib/api';
+
+const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function DetailerSchedule() {
-  const [schedule, setSchedule] = useState(mockDetailerSchedule);
   const { toast } = useToast();
+  const [schedule, setSchedule] = useState<any[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  const { data: apiSchedule } = useQuery({
+    queryKey: ['schedule'],
+    queryFn: () => api.get<any[]>('/detailer/schedule'),
+  });
+
+  useEffect(() => {
+    if (apiSchedule && apiSchedule.length > 0) {
+      setSchedule(apiSchedule.map(s => ({
+        dayOfWeek: s.dayOfWeek,
+        startTime: s.startTime || '08:00',
+        endTime: s.endTime || '17:00',
+        isAvailable: s.isAvailable,
+      })));
+    } else {
+      // Default schedule
+      setSchedule(dayNames.map((_, i) => ({
+        dayOfWeek: i,
+        startTime: '08:00',
+        endTime: '17:00',
+        isAvailable: i >= 1 && i <= 5,
+      })));
+    }
+  }, [apiSchedule]);
 
   const toggleDay = (idx: number) => {
     const updated = [...schedule];
@@ -17,9 +45,23 @@ export default function DetailerSchedule() {
     setSchedule(updated);
   };
 
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.put('/detailer/schedule', { schedule });
+      toast({ title: 'Schedule Saved', description: 'Your availability has been updated.' });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to save schedule';
+      toast({ title: 'Error', description: msg, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <DashboardLayout role="detailer" userName="Peter Ochieng">
-      <PageHeader title="My Schedule" subtitle="Set your weekly availability" action={<Button size="sm" onClick={() => toast({ title: 'Schedule Saved', description: 'Your availability has been updated.' })}>Save Changes</Button>} />
+    <DashboardLayout>
+      <PageHeader title="My Schedule" subtitle="Set your weekly availability"
+        action={<Button size="sm" onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</Button>} />
       <div className="max-w-lg space-y-3">
         {schedule.map((s, i) => (
           <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-card border border-border">

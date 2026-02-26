@@ -3,7 +3,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
 // Public pages
@@ -11,6 +13,7 @@ import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import RoadmapPage from "./pages/RoadmapPage";
 
 // Customer pages
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
@@ -36,8 +39,6 @@ import OwnerStaff from "./pages/owner/OwnerStaff";
 import OwnerLocations from "./pages/owner/OwnerLocations";
 import OwnerAnalytics from "./pages/owner/OwnerAnalytics";
 import OwnerPayments from "./pages/owner/OwnerPayments";
-import OwnerAIInsights from "./pages/owner/OwnerAIInsights";
-import OwnerStaking from "./pages/owner/OwnerStaking";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -51,7 +52,28 @@ import AdminApprovals from "./pages/admin/AdminApprovals";
 import SettingsPage from "./pages/SettingsPage";
 import NotificationPreferences from "./pages/NotificationPreferences";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 30_000,
+    },
+  },
+});
+
+// Smart root redirect based on auth state
+function RootRedirect() {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return null;
+  if (!user) return <LandingPage />;
+  const dashboardMap = {
+    customer: '/customer',
+    detailer: '/detailer',
+    owner: '/owner',
+    admin: '/admin',
+  };
+  return <Navigate to={dashboardMap[user.role]} replace />;
+}
 
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
@@ -59,61 +81,61 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          {/* Public */}
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+        <AuthProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* Public */}
+              <Route path="/" element={<RootRedirect />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/roadmap" element={<RoadmapPage />} />
 
-          {/* Customer */}
-          <Route path="/customer" element={<CustomerDashboard />} />
-          <Route path="/customer/book" element={<BookService />} />
-          <Route path="/customer/bookings" element={<CustomerBookings />} />
-          <Route path="/customer/vehicles" element={<CustomerVehicles />} />
-          <Route path="/customer/loyalty" element={<CustomerLoyalty />} />
-          <Route path="/customer/payments" element={<CustomerPayments />} />
-          <Route path="/customer/wallet" element={<CustomerWallet />} />
-          <Route path="/customer/live" element={<CustomerLiveView />} />
-          <Route path="/customer/settings" element={<SettingsPage role="customer" userName="James Mwangi" />} />
-          <Route path="/customer/notifications" element={<NotificationPreferences role="customer" userName="James Mwangi" />} />
+              {/* Customer */}
+              <Route path="/customer" element={<ProtectedRoute allowedRoles={['customer']}><CustomerDashboard /></ProtectedRoute>} />
+              <Route path="/customer/book" element={<ProtectedRoute allowedRoles={['customer']}><BookService /></ProtectedRoute>} />
+              <Route path="/customer/bookings" element={<ProtectedRoute allowedRoles={['customer']}><CustomerBookings /></ProtectedRoute>} />
+              <Route path="/customer/vehicles" element={<ProtectedRoute allowedRoles={['customer']}><CustomerVehicles /></ProtectedRoute>} />
+              <Route path="/customer/loyalty" element={<ProtectedRoute allowedRoles={['customer']}><CustomerLoyalty /></ProtectedRoute>} />
+              <Route path="/customer/payments" element={<ProtectedRoute allowedRoles={['customer']}><CustomerPayments /></ProtectedRoute>} />
+              <Route path="/customer/wallet" element={<ProtectedRoute allowedRoles={['customer']}><CustomerWallet /></ProtectedRoute>} />
+              <Route path="/customer/live" element={<ProtectedRoute allowedRoles={['customer']}><CustomerLiveView /></ProtectedRoute>} />
+              <Route path="/customer/settings" element={<ProtectedRoute allowedRoles={['customer']}><SettingsPage /></ProtectedRoute>} />
+              <Route path="/customer/notifications" element={<ProtectedRoute allowedRoles={['customer']}><NotificationPreferences /></ProtectedRoute>} />
 
-          {/* Detailer */}
-          <Route path="/detailer" element={<DetailerDashboard />} />
-          <Route path="/detailer/jobs" element={<DetailerJobs />} />
-          <Route path="/detailer/schedule" element={<DetailerSchedule />} />
-          <Route path="/detailer/earnings" element={<DetailerEarnings />} />
-          <Route path="/detailer/settings" element={<SettingsPage role="detailer" userName="Peter Ochieng" />} />
-          <Route path="/detailer/notifications" element={<NotificationPreferences role="detailer" userName="Peter Ochieng" />} />
+              {/* Detailer */}
+              <Route path="/detailer" element={<ProtectedRoute allowedRoles={['detailer']}><DetailerDashboard /></ProtectedRoute>} />
+              <Route path="/detailer/jobs" element={<ProtectedRoute allowedRoles={['detailer']}><DetailerJobs /></ProtectedRoute>} />
+              <Route path="/detailer/schedule" element={<ProtectedRoute allowedRoles={['detailer']}><DetailerSchedule /></ProtectedRoute>} />
+              <Route path="/detailer/earnings" element={<ProtectedRoute allowedRoles={['detailer']}><DetailerEarnings /></ProtectedRoute>} />
+              <Route path="/detailer/settings" element={<ProtectedRoute allowedRoles={['detailer']}><SettingsPage /></ProtectedRoute>} />
+              <Route path="/detailer/notifications" element={<ProtectedRoute allowedRoles={['detailer']}><NotificationPreferences /></ProtectedRoute>} />
 
-          {/* Owner */}
-          <Route path="/owner" element={<OwnerDashboard />} />
-          <Route path="/owner/bookings" element={<OwnerBookings />} />
-          <Route path="/owner/services" element={<OwnerServices />} />
-          <Route path="/owner/staff" element={<OwnerStaff />} />
-          <Route path="/owner/locations" element={<OwnerLocations />} />
-          <Route path="/owner/analytics" element={<OwnerAnalytics />} />
-          <Route path="/owner/payments" element={<OwnerPayments />} />
-          <Route path="/owner/ai-insights" element={<OwnerAIInsights />} />
-          <Route path="/owner/staking" element={<OwnerStaking />} />
-          <Route path="/owner/settings" element={<SettingsPage role="owner" userName="David Kamau" />} />
-          <Route path="/owner/notifications" element={<NotificationPreferences role="owner" userName="David Kamau" />} />
+              {/* Owner */}
+              <Route path="/owner" element={<ProtectedRoute allowedRoles={['owner']}><OwnerDashboard /></ProtectedRoute>} />
+              <Route path="/owner/bookings" element={<ProtectedRoute allowedRoles={['owner']}><OwnerBookings /></ProtectedRoute>} />
+              <Route path="/owner/services" element={<ProtectedRoute allowedRoles={['owner']}><OwnerServices /></ProtectedRoute>} />
+              <Route path="/owner/staff" element={<ProtectedRoute allowedRoles={['owner']}><OwnerStaff /></ProtectedRoute>} />
+              <Route path="/owner/locations" element={<ProtectedRoute allowedRoles={['owner']}><OwnerLocations /></ProtectedRoute>} />
+              <Route path="/owner/analytics" element={<ProtectedRoute allowedRoles={['owner']}><OwnerAnalytics /></ProtectedRoute>} />
+              <Route path="/owner/payments" element={<ProtectedRoute allowedRoles={['owner']}><OwnerPayments /></ProtectedRoute>} />
+              <Route path="/owner/settings" element={<ProtectedRoute allowedRoles={['owner']}><SettingsPage /></ProtectedRoute>} />
+              <Route path="/owner/notifications" element={<ProtectedRoute allowedRoles={['owner']}><NotificationPreferences /></ProtectedRoute>} />
 
-          {/* Admin */}
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/users" element={<AdminUsers />} />
-          <Route path="/admin/bookings" element={<AdminBookings />} />
-          <Route path="/admin/transactions" element={<AdminTransactions />} />
-          <Route path="/admin/services" element={<AdminServices />} />
-          <Route path="/admin/approvals" element={<AdminApprovals />} />
-          <Route path="/admin/settings" element={<SettingsPage role="admin" userName="Sarah Njeri" />} />
-          <Route path="/admin/notifications" element={<NotificationPreferences role="admin" userName="Sarah Njeri" />} />
+              {/* Admin */}
+              <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+              <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUsers /></ProtectedRoute>} />
+              <Route path="/admin/bookings" element={<ProtectedRoute allowedRoles={['admin']}><AdminBookings /></ProtectedRoute>} />
+              <Route path="/admin/transactions" element={<ProtectedRoute allowedRoles={['admin']}><AdminTransactions /></ProtectedRoute>} />
+              <Route path="/admin/services" element={<ProtectedRoute allowedRoles={['admin']}><AdminServices /></ProtectedRoute>} />
+              <Route path="/admin/approvals" element={<ProtectedRoute allowedRoles={['admin']}><AdminApprovals /></ProtectedRoute>} />
+              <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['admin']}><SettingsPage /></ProtectedRoute>} />
+              <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={['admin']}><NotificationPreferences /></ProtectedRoute>} />
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   </ThemeProvider>

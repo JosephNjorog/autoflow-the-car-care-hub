@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '../_lib/db';
 import { generateToken } from '../_lib/auth';
 import { handleCors } from '../_lib/cors';
+import { sendWelcomeEmail } from '../_lib/email';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
@@ -52,6 +53,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         INSERT INTO notifications (user_id, title, message, type)
         VALUES (${user.id}, 'Welcome to AutoFlow!', 'Your account has been created via Google. Book your first car wash today!', 'system')
       `;
+      sendWelcomeEmail(user.email as string, user.first_name as string, 'customer')
+        .catch((err: unknown) => console.error('Google welcome email failed:', err));
     } else if (!user.google_id) {
       // Link Google account to existing user
       await sql`UPDATE users SET google_id = ${googleUser.id}, is_verified = true WHERE id = ${user.id}`;

@@ -4,6 +4,7 @@ import { requireRole } from '../_lib/auth';
 import { handleCors } from '../_lib/cors';
 import bcrypt from 'bcryptjs';
 import { generateToken } from '../_lib/auth';
+import { sendStaffCredentials } from '../_lib/email';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
@@ -50,6 +51,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         VALUES (${auth.userId}, ${user.id})
         ON CONFLICT DO NOTHING
       `;
+
+      // Email credentials to the new detailer non-blocking
+      const [owner] = await sql`SELECT first_name, last_name FROM users WHERE id = ${auth.userId}`;
+      const ownerName = owner ? `${owner.first_name} ${owner.last_name}` : undefined;
+      sendStaffCredentials(user.email as string, user.first_name as string, finalPassword, ownerName)
+        .catch((err: unknown) => console.error('Staff credentials email failed:', err));
 
       return res.status(201).json({
         id: user.id,

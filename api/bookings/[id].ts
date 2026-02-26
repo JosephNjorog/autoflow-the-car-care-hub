@@ -95,22 +95,83 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await sql`UPDATE transactions SET status = 'completed' WHERE booking_id = ${id}`;
 
         // Notify customer
-        const [cust] = await sql`SELECT c.first_name, c.id FROM bookings b JOIN users c ON c.id = b.customer_id WHERE b.id = ${id}`;
+        const [cust] = await sql`
+          SELECT c.first_name, c.last_name, c.email, c.id, s.name as service_name, l.name as location_name, b.scheduled_date::text as date
+          FROM bookings b
+          JOIN users c ON c.id = b.customer_id
+          JOIN services s ON s.id = b.service_id
+          JOIN locations l ON l.id = b.location_id
+          WHERE b.id = ${id}
+        `;
         if (cust) {
           await sql`
             INSERT INTO notifications (user_id, title, message, type)
             VALUES (${cust.id}, 'Service Completed', 'Your service has been completed. Tap to leave a review!', 'booking')
           `;
+          sendBookingStatusEmail(cust.email as string, cust.first_name as string, 'completed', {
+            serviceName: cust.service_name as string,
+            locationName: cust.location_name as string,
+            date: cust.date as string,
+            loyaltyPoints: points,
+          }).catch((err: unknown) => console.error('Completed email failed:', err));
         }
       }
 
       if (status === 'in_progress') {
-        const [cust] = await sql`SELECT c.id, s.name as service_name FROM bookings b JOIN users c ON c.id = b.customer_id JOIN services s ON s.id = b.service_id WHERE b.id = ${id}`;
+        const [cust] = await sql`
+          SELECT c.id, c.first_name, c.email, s.name as service_name, l.name as location_name, b.scheduled_date::text as date
+          FROM bookings b
+          JOIN users c ON c.id = b.customer_id
+          JOIN services s ON s.id = b.service_id
+          JOIN locations l ON l.id = b.location_id
+          WHERE b.id = ${id}
+        `;
         if (cust) {
           await sql`
             INSERT INTO notifications (user_id, title, message, type)
             VALUES (${cust.id}, 'Service Started', ${'Your ' + cust.service_name + ' service has started!'}, 'booking')
           `;
+          sendBookingStatusEmail(cust.email as string, cust.first_name as string, 'in_progress', {
+            serviceName: cust.service_name as string,
+            locationName: cust.location_name as string,
+            date: cust.date as string,
+          }).catch((err: unknown) => console.error('In-progress email failed:', err));
+        }
+      }
+
+      if (status === 'confirmed') {
+        const [cust] = await sql`
+          SELECT c.first_name, c.email, s.name as service_name, l.name as location_name, b.scheduled_date::text as date
+          FROM bookings b
+          JOIN users c ON c.id = b.customer_id
+          JOIN services s ON s.id = b.service_id
+          JOIN locations l ON l.id = b.location_id
+          WHERE b.id = ${id}
+        `;
+        if (cust) {
+          sendBookingStatusEmail(cust.email as string, cust.first_name as string, 'confirmed', {
+            serviceName: cust.service_name as string,
+            locationName: cust.location_name as string,
+            date: cust.date as string,
+          }).catch((err: unknown) => console.error('Confirmed email failed:', err));
+        }
+      }
+
+      if (status === 'cancelled') {
+        const [cust] = await sql`
+          SELECT c.first_name, c.email, s.name as service_name, l.name as location_name, b.scheduled_date::text as date
+          FROM bookings b
+          JOIN users c ON c.id = b.customer_id
+          JOIN services s ON s.id = b.service_id
+          JOIN locations l ON l.id = b.location_id
+          WHERE b.id = ${id}
+        `;
+        if (cust) {
+          sendBookingStatusEmail(cust.email as string, cust.first_name as string, 'cancelled', {
+            serviceName: cust.service_name as string,
+            locationName: cust.location_name as string,
+            date: cust.date as string,
+          }).catch((err: unknown) => console.error('Cancelled email failed:', err));
         }
       }
     }

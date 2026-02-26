@@ -17,6 +17,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { runCryptoPayment, isWalletAvailable, type CryptoPaymentStep } from '@/lib/crypto';
+import { fetchLivePrices } from '@/lib/prices';
 
 type ServiceMode = 'all' | 'irl' | 'mobile';
 
@@ -55,6 +56,12 @@ export default function BookService() {
   const { data: vehicles = [] } = useQuery({
     queryKey: ['vehicles'],
     queryFn: () => api.get<any[]>('/vehicles'),
+  });
+
+  const { data: livePrices } = useQuery({
+    queryKey: ['live-prices'],
+    queryFn: fetchLivePrices,
+    staleTime: 60_000,
   });
 
   const filteredLocations = useMemo(() => {
@@ -144,7 +151,7 @@ export default function BookService() {
     }
   };
 
-  const conversionRate = 129.05;
+  const conversionRate = livePrices?.kesPerUsd ?? 129.05;
   const usdAmount = selectedServiceData ? (selectedServiceData.price / conversionRate).toFixed(2) : '0';
 
   // ─── CONFIRMED ────────────────────────────────────

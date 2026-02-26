@@ -1,341 +1,450 @@
 # AutoFlow — Web3-Powered Car Wash Management Platform
 
-> **Built for the Avalanche Hackathon** | Multi-role SaaS platform connecting car wash businesses, customers, and detailers with on-chain payments, AI analytics, and real-time service tracking.
+> **Avalanche Hackathon 2026** · Live at **[autoflowbuzz.vercel.app](https://autoflowbuzz.vercel.app)**
+
+AutoFlow is a full-stack, multi-role SaaS platform that bridges traditional mobile money (M-Pesa) with Web3 payments on Avalanche C-Chain. It connects car wash businesses, customers, and detailers with a production backend, real USDT payments via Tether WDK, and live price feeds from Chainlink Data Feeds.
 
 ---
 
-## 🌟 Overview
+## Current Status
 
-AutoFlow is a comprehensive car wash management platform built on **Avalanche C-Chain** that bridges traditional mobile money (M-Pesa) with Web3 payments, AI-powered business intelligence, and on-chain loyalty rewards. It serves four user roles:
+| Area | Status |
+| ------ | -------- |
+| Frontend — all 4 roles | ✅ Complete |
+| Backend — Vercel Serverless API | ✅ Live in production |
+| Database — Neon PostgreSQL | ✅ Live |
+| M-Pesa STK Push payments | ✅ Working (Safaricom sandbox) |
+| Tether WDK — embedded wallet | ✅ Integrated (`@tetherto/wdk`) |
+| Tether WDK — USDT transfers on Avalanche | ✅ Integrated |
+| Chainlink Data Feeds — on-chain prices | ✅ Live (AggregatorV3 on Avalanche) |
+| Email (welcome, password reset) | ✅ Working (SMTP/Gmail) |
+| Google OAuth | ✅ Working |
+| Agora live video | 🔜 Roadmap |
+| Kite AI insights | 🔜 Roadmap |
+| Suzaku AVAX staking | 🔜 Roadmap |
+| DH3 NFT loyalty | 🔜 Roadmap |
 
-| Role | Description |
+---
+
+## Hackathon Integrations
+
+### 1. Tether WDK — Self-Custodial Embedded Wallet ✅
+
+The centrepiece crypto integration. We use the official `@tetherto/wdk` + `@tetherto/wdk-wallet-evm` packages to give every customer a self-custodial USDT wallet built directly into the app — no MetaMask or extensions required.
+
+**Why this matters:** A Kenyan in the diaspora can create an AutoFlow wallet, fund it with USDT, and pay for a family member's car wash in Nairobi — no bank transfer, no M-Pesa roaming fees, just a wallet-to-wallet USDT transfer on Avalanche.
+
+**What's implemented:**
+
+| File | What it does |
 |------|-------------|
-| **Customer** | Book services, pay with M-Pesa or crypto, watch live video of their car being serviced, earn NFT loyalty rewards |
-| **Detailer** | Manage jobs, stream live video to customers, upload before/after photos, track earnings |
-| **Business Owner** | Manage locations, services, staff, view AI-powered analytics, stake AVAX earnings |
-| **Super Admin** | Platform-wide oversight, user management, transaction auditing across all payment methods |
+| [`src/lib/wdk.ts`](src/lib/wdk.ts) | Full WDK integration: create wallet via `WDK.getRandomSeedPhrase()`, restore from seed, read AVAX/USDT/USDC balances via `WalletAccountReadOnlyEvm`, send USDT via `account.transfer()` |
+| [`src/lib/crypto.ts`](src/lib/crypto.ts) | Unified payment flow supporting both WDK embedded wallet and injected wallets (MetaMask, Core, Trust) |
+| [`src/pages/customer/CustomerWallet.tsx`](src/pages/customer/CustomerWallet.tsx) | Wallet UI: create/restore WDK wallet with seed phrase reveal, live balance display, external wallet connect |
+| [`src/pages/customer/BookService.tsx`](src/pages/customer/BookService.tsx) | USDT/USDC payment option at checkout with live KES→USD conversion |
 
----
+**WDK wallet flow:**
+```
+Customer clicks "Create Wallet"
+  → WDK.getRandomSeedPhrase(12) generates BIP-39 seed phrase
+  → WalletManagerEvm derives HD wallet address on Avalanche C-Chain
+  → Seed stored in localStorage
+  → User backs up seed phrase → wallet is ready to fund and use
 
-## 🔗 Hackathon Integrations (Priority Order)
-
-### 1. 🟢 Tether WDK (Wallet Development Kit)
-**Status:** Frontend UI Complete | **Backend:** Pending
-
-The core crypto payment integration. Tether WDK enables USDT payments directly within the platform on Avalanche C-Chain.
-
-**Frontend Implementation:**
-- `src/pages/customer/CustomerWallet.tsx` — Wallet connection UI with Tether WDK branding, multi-wallet support (Core, MetaMask, WalletConnect, Coinbase), USDT/USDC/AVAX balance display
-- `src/pages/customer/BookService.tsx` — USDT added as a payment method in the booking flow with real-time KES conversion
-- `src/pages/customer/CustomerPayments.tsx` — Payment history showing crypto transaction hashes with Snowtrace explorer links
-
-**Backend Requirements:**
-- Integrate `@aspect-build/web3-react` or Tether WDK SDK for wallet connection
-- Implement USDT transfer smart contract calls on Avalanche C-Chain
-- STK Push equivalent for crypto: initiate payment → confirm on-chain → update booking status
-- Webhook listener for on-chain transaction confirmations
-- Store wallet addresses and transaction hashes in database
-
-**Smart Contract Needs:**
-- Payment escrow contract (hold USDT until service confirmed)
-- Auto-release to business owner wallet on service completion
-- Refund mechanism for cancelled bookings
-
----
-
-### 2. 🔵 Chainlink Data Feeds
-**Status:** Frontend UI Complete | **Backend:** Pending
-
-Provides reliable, decentralized price feeds for accurate KES ↔ crypto conversions.
-
-**Frontend Implementation:**
-- `src/pages/customer/CustomerWallet.tsx` — Live price feeds tab showing AVAX/USD, USDT/USD, USDC/USD, AVAX/KES with Chainlink branding
-- `src/pages/customer/BookService.tsx` — Real-time crypto equivalent shown during payment (e.g., "KES 3,000 ≈ 23.24 USDT via Chainlink")
-
-**Backend Requirements:**
-- Read Chainlink Price Feed contracts on Avalanche:
-  - `AVAX/USD`: `0x0A77230d17318075983913bC2145DB16C7366156`
-  - Deploy or use existing `USD/KES` feed (or use off-chain oracle for KES rate)
-- Cache prices server-side (refresh every 30s) to minimize RPC calls
-- Expose `/api/prices` endpoint for frontend consumption
-- Calculate crypto amounts: `cryptoAmount = kesPrice / (usdKesRate * tokenUsdRate)`
-
-**Edge Function:**
-```typescript
-// supabase/functions/get-prices/index.ts
-// Read Chainlink AggregatorV3Interface for live prices
-// Return { avaxUsd, usdtUsd, usdcUsd, usdKes, avaxKes }
+Customer pays with USDT:
+  → WalletManagerEvm(seed).getAccount(0) instantiates the account
+  → Balance check via account.getTokenBalance(USDT_ADDRESS)
+  → account.transfer({ token, recipient, amount }) executes on-chain
+  → account.dispose() clears private key from memory immediately
+  → Transaction hash stored against the booking record
 ```
 
 ---
 
-### 3. 🧠 Kite AI
-**Status:** Frontend UI Complete | **Backend:** Pending
+### 2. Chainlink Data Feeds — On-Chain Price Oracle ✅
 
-AI-powered business intelligence running on the Kite AI blockchain network for decentralized, verifiable inference.
+We read AVAX/USD, USDT/USD, and USDC/USD prices directly from Chainlink AggregatorV3 contracts deployed on Avalanche C-Chain. No API key, no centralised price API — verifiable on-chain data that business owners and customers can trust.
 
-**Frontend Implementation:**
-- `src/pages/owner/OwnerAIInsights.tsx` — Two-tab interface:
-  - **Smart Insights**: AI-generated cards with dynamic pricing suggestions, customer retention alerts, staff optimization, and upsell recommendations (with confidence scores)
-  - **AI Chat Assistant**: Conversational interface for querying business data ("Revenue this month?", "Top service by profit?", "Suggest pricing changes")
+**Feed addresses used (Avalanche C-Chain Mainnet):**
 
-**Backend Requirements:**
-- Integrate Kite AI inference API for natural language processing
-- Build data pipeline: aggregate booking, revenue, and customer data → feed to AI model
-- Implement insight generation:
-  - **Dynamic Pricing**: Analyze demand patterns by time/day → suggest surge pricing
-  - **Customer Retention**: Track booking frequency → flag at-risk customers
-  - **Upsell Engine**: Analyze service co-occurrence → suggest bundles
-- Store generated insights with timestamps and confidence scores
-- Chat endpoint: accept natural language query → retrieve relevant data → generate response via Kite AI
+| Feed | Contract Address |
+|------|----------|
+| AVAX/USD | `0xFF3EEb22B5E3dE6e705b44749C2559d704923FD` |
+| USDT/USD | `0xEBE676ee90Fe1112671f19b6B7459bC678B67e8` |
+| USDC/USD | `0xF096872672F44d6EBA71527d2277B5b7A1E4D63` |
 
-**Edge Function:**
-```typescript
-// supabase/functions/ai-insights/index.ts
-// POST { query: "revenue this month" }
-// → Aggregate data from bookings/transactions tables
-// → Send to Kite AI API for inference
-// → Return structured response
+**What's implemented:**
+
+| File | What it does |
+|------|-------------|
+| [`src/lib/prices.ts`](src/lib/prices.ts) | Reads `latestRoundData()` from each AggregatorV3 via `JsonRpcProvider`, validates freshness (rejects data >1h old), falls back to CoinGecko if RPC unavailable |
+| [`src/pages/customer/CustomerWallet.tsx`](src/pages/customer/CustomerWallet.tsx) | Live prices tab — shows "Chainlink" or "CoinGecko fallback" source badge on each feed |
+| [`src/pages/customer/BookService.tsx`](src/pages/customer/BookService.tsx) | Checkout shows live KES/USD rate for accurate crypto payment amounts |
+
+KES/USD has no Chainlink feed on Avalanche, so we use `open.er-api.com` (free, no key) for that rate, combined with the on-chain AVAX/USD to produce a live AVAX/KES rate.
+
+---
+
+### 3. M-Pesa STK Push — Mobile Money Payments ✅
+
+Real M-Pesa integration via Safaricom Daraja API. Customer enters their phone number at checkout → receives STK Push on their phone → enters PIN → booking confirmed automatically via webhook callback.
+
+**Flow:**
+```
+POST /api/payments/mpesa-stk
+  → Initiates STK Push via Daraja API
+  → Returns checkoutRequestId to poll against
+
+POST /api/payments/mpesa-callback  (called by Safaricom)
+  → Validates payment confirmation
+  → Updates transaction status to 'completed'
+  → Confirms the booking
+  → Awards loyalty points (1 pt per KES 10 spent)
+  → Sends notification to customer and business owner
 ```
 
 ---
 
-### 4. 📹 Agora (Real-Time Video)
-**Status:** Frontend UI Complete | **Backend:** Pending
+### 4. Kite AI — AI Business Insights 🔜
 
-Live video streaming between detailers and customers during active services.
-
-**Frontend Implementation:**
-- `src/pages/customer/CustomerLiveView.tsx` — Full video call interface with:
-  - Live video feed area with PiP self-view
-  - Video/audio controls (mute, camera toggle, screenshot, fullscreen)
-  - Real-time chat sidebar with active booking info
-  - LIVE indicator badge and call duration timer
-- `src/pages/detailer/DetailerJobs.tsx` — "Go Live" button on in-progress jobs
-
-**Backend Requirements:**
-- Integrate Agora RTC SDK (`agora-rtc-sdk-ng`)
-- Token server: generate Agora RTC tokens per booking session
-- Channel naming: `autoflow-booking-{bookingId}`
-- Role assignment: detailer = broadcaster, customer = audience (with optional upgrade to broadcaster)
-- Recording: optionally store session recordings for dispute resolution
-- Signaling: use Agora RTM for the in-call chat messages
-
-**Edge Function:**
-```typescript
-// supabase/functions/agora-token/index.ts
-// POST { bookingId, role: "publisher" | "subscriber" }
-// → Validate booking is in_progress
-// → Generate Agora RTC token with channel name
-// → Return { token, channelName, uid }
-```
-
-**Environment Variables Needed:**
-- `AGORA_APP_ID`
-- `AGORA_APP_CERTIFICATE`
+AI-powered analytics for business owners, running on the Kite AI decentralised inference network. The UI is complete — owners see a "Coming Soon" page that outlines all 6 planned insight types: dynamic pricing, customer retention alerts, staff optimisation, upsell recommendations, AI chat assistant, and revenue forecasting. Backend integration with Kite AI's inference API is on the roadmap.
 
 ---
 
-### 5. 🏆 DH3 (Decentralized Loyalty NFTs)
-**Status:** Frontend UI Complete | **Backend:** Pending
+### 5. Suzaku — AVAX Liquid Staking 🔜
 
-On-chain loyalty program with soulbound NFT membership tiers.
-
-**Frontend Implementation:**
-- `src/pages/customer/CustomerLoyalty.tsx` — Two-tab interface:
-  - **Points & Tiers**: Traditional points display with progress bar toward next tier
-  - **NFT Membership**: Visual NFT card for current tier, perks list, all 4 tier NFTs (Bronze → Silver → Gold → Platinum), on-chain verification link
-
-**Backend Requirements:**
-- Deploy soulbound NFT smart contract on Avalanche (ERC-721 with transfer restrictions)
-- Tier thresholds: Bronze (0 pts), Silver (1000), Gold (3000), Platinum (5000)
-- Mint NFT on tier upgrade, burn previous tier NFT
-- Metadata: store tier name, perks, customer ID, mint date
-- Integration with DH3 protocol for decentralized identity verification
-- On-chain perks verification: smart contract view function to check if address has valid tier NFT
-
-**Smart Contract:**
-```solidity
-// AutoFlowMembership.sol
-contract AutoFlowMembership is ERC721, Ownable {
-    enum Tier { Bronze, Silver, Gold, Platinum }
-    mapping(address => Tier) public memberTier;
-    
-    function upgradeTier(address member, Tier newTier) external onlyOwner {
-        // Burn old, mint new with updated metadata
-    }
-    
-    function _beforeTokenTransfer(...) internal override {
-        require(from == address(0) || to == address(0), "Soulbound: non-transferable");
-    }
-}
-```
+Business owners will stake AVAX earnings from AutoFlow into Suzaku's liquid staking pool to earn ~7% APY while receiving liquid sAVAX tokens. The UI is complete with a full explainer. Protocol integration is on the roadmap.
 
 ---
 
-### 6. 💰 Suzaku (Liquid Staking)
-**Status:** Frontend UI Complete | **Backend:** Pending
+### 6. DH3 — Soulbound NFT Loyalty Tiers 🔜
 
-AVAX liquid staking for business owners to earn yield on their payment earnings.
-
-**Frontend Implementation:**
-- `src/pages/owner/OwnerStaking.tsx` — Full staking dashboard:
-  - Stats: total staked, rewards earned, APY, USD value
-  - Stake form with amount input, max button, estimated rewards calculator
-  - How-it-works explainer (Stake → sAVAX → Yield → Unstake)
-  - Staking history with action type, amounts, and status
-
-**Backend Requirements:**
-- Integrate Suzaku liquid staking protocol SDK
-- Implement stake/unstake transactions on Avalanche
-- Track sAVAX balance and reward accrual
-- Periodic reward distribution tracking
-- Display real-time APY from Suzaku protocol
+On-chain loyalty membership NFTs (Bronze → Silver → Gold → Platinum) tied to customer wallet addresses, non-transferable (soulbound). The points system is live in the database and the full loyalty UI is built. NFT smart contract deployment and DH3 protocol integration are on the roadmap.
 
 ---
 
-## 🏗️ Tech Stack
+### 7. Agora — Live Video Check-In 🔜
+
+Real-time video streaming so customers can watch their car being washed live. Full UI is built in `CustomerLiveView.tsx` and `DetailerJobs.tsx`. Agora RTC token generation and channel management are on the roadmap.
+
+---
+
+## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui |
+| **Frontend** | React 18, TypeScript, Vite 5 |
+| **UI** | Tailwind CSS, shadcn/ui, Radix UI primitives |
 | **Animations** | Framer Motion |
 | **Charts** | Recharts |
 | **Routing** | React Router v6 |
-| **State** | TanStack React Query |
-| **Blockchain** | Avalanche C-Chain (EVM) |
-| **Backend (Planned)** | Supabase (PostgreSQL, Edge Functions, Auth, Storage) |
-| **Payments** | M-Pesa STK Push, Tether WDK (USDT), USDC, Cash, Card |
-| **AI** | Kite AI (decentralized inference) |
-| **Video** | Agora RTC SDK |
-| **Oracles** | Chainlink Data Feeds |
-| **NFTs** | DH3 Protocol (soulbound membership tokens) |
-| **DeFi** | Suzaku Liquid Staking (sAVAX) |
+| **Data fetching** | TanStack React Query |
+| **Backend** | Vercel Serverless Functions (`@vercel/node`, TypeScript) |
+| **Database** | Neon PostgreSQL (serverless, connection pooling) |
+| **Auth** | JWT (`jsonwebtoken`), bcrypt passwords, Google OAuth 2.0 |
+| **Email** | Nodemailer via Gmail SMTP (welcome, password reset) |
+| **Blockchain** | Avalanche C-Chain (EVM, chain ID 43114) |
+| **Wallet SDK** | `@tetherto/wdk` + `@tetherto/wdk-wallet-evm` |
+| **Web3 library** | ethers.js v6 |
+| **Price Oracle** | Chainlink AggregatorV3 (on-chain), CoinGecko fallback |
+| **FX Rate** | open.er-api.com (KES/USD, free, no key) |
+| **Mobile Money** | Safaricom M-Pesa Daraja API (STK Push) |
+| **Deployment** | Vercel Hobby (12 serverless functions, at limit) |
 
 ---
 
-## 📁 Project Structure
+## Architecture
+
+### Request Flow
 
 ```
-src/
-├── components/
-│   ├── layout/
-│   │   └── DashboardLayout.tsx       # Multi-role sidebar layout with notifications
-│   ├── shared/
-│   │   └── SharedComponents.tsx      # StatCard, StatusBadge, PageHeader, EmptyState
-│   ├── ui/                           # shadcn/ui component library
-│   ├── ThemeProvider.tsx              # Dark/light mode via next-themes
-│   └── ThemeToggle.tsx               # Animated sun/moon toggle
-├── pages/
-│   ├── LandingPage.tsx               # Public marketing page with hero
-│   ├── LoginPage.tsx                 # Authentication
-│   ├── RegisterPage.tsx              # Multi-role registration
-│   ├── customer/
-│   │   ├── CustomerDashboard.tsx     # Overview with upcoming bookings
-│   │   ├── BookService.tsx           # 3-step booking flow (Tether/Chainlink)
-│   │   ├── CustomerBookings.tsx      # Booking history
-│   │   ├── CustomerLiveView.tsx      # Agora live video check-in
-│   │   ├── CustomerVehicles.tsx      # Vehicle management
-│   │   ├── CustomerLoyalty.tsx       # Points + DH3 NFT membership
-│   │   ├── CustomerPayments.tsx      # Payment history (M-Pesa + crypto)
-│   │   └── CustomerWallet.tsx        # Tether WDK wallet + Chainlink prices
-│   ├── detailer/
-│   │   ├── DetailerDashboard.tsx     # Job overview
-│   │   ├── DetailerJobs.tsx          # Job management + Agora "Go Live"
-│   │   ├── DetailerSchedule.tsx      # Weekly availability
-│   │   └── DetailerEarnings.tsx      # Earnings tracking
-│   ├── owner/
-│   │   ├── OwnerDashboard.tsx        # Business overview with revenue chart
-│   │   ├── OwnerAIInsights.tsx       # Kite AI insights + chat assistant
-│   │   ├── OwnerStaking.tsx          # Suzaku AVAX liquid staking
-│   │   ├── OwnerAnalytics.tsx        # Charts and analytics
-│   │   ├── OwnerBookings.tsx         # All bookings management
-│   │   ├── OwnerServices.tsx         # Service catalog management
-│   │   ├── OwnerStaff.tsx            # Detailer management
-│   │   ├── OwnerLocations.tsx        # Location management
-│   │   └── OwnerPayments.tsx         # Revenue and payouts
-│   └── admin/
-│       ├── AdminDashboard.tsx        # Platform-wide overview
-│       ├── AdminUsers.tsx            # User management
-│       ├── AdminBookings.tsx         # All bookings
-│       ├── AdminTransactions.tsx     # Financial audit (M-Pesa + crypto)
-│       ├── AdminServices.tsx         # Service approval
-│       └── AdminApprovals.tsx        # Business onboarding approvals
-├── data/
-│   └── mockData.ts                   # Comprehensive mock data
-├── types/
-│   └── index.ts                      # TypeScript interfaces
-└── hooks/                            # Custom React hooks
+Browser (React SPA)
+  │
+  ├─ API calls (fetch + Bearer JWT)
+  │     └──► Vercel Serverless Functions ──► Neon PostgreSQL
+  │              api/auth/[[...slug]].ts
+  │              api/bookings/[[...slug]].ts
+  │              api/payments/[[...slug]].ts
+  │              api/services/[[...slug]].ts
+  │              api/locations/[[...slug]].ts
+  │              api/users/[[...slug]].ts
+  │              api/vehicles/[[...slug]].ts
+  │              api/detailer/[[...slug]].ts
+  │              api/analytics/index.ts
+  │              api/notifications/index.ts
+  │              api/loyalty/index.ts
+  │              api/admin/approvals.ts
+  │
+  ├─ Tether WDK (browser-side)
+  │     └──► Avalanche C-Chain RPC ──► USDT ERC-20 Contract (0x9702230A...)
+  │           @tetherto/wdk-wallet-evm        transfer() / balanceOf()
+  │
+  └─ Chainlink (browser-side)
+        └──► Avalanche C-Chain RPC ──► AggregatorV3 contracts
+              ethers JsonRpcProvider          latestRoundData()
+```
+
+### Serverless Routing Pattern
+
+All grouped API routes use Vercel's `[[...slug]].ts` optional catch-all to stay within the 12-function Hobby plan limit:
+
+```
+/api/auth/login           → api/auth/[[...slug]].ts     slug=['login']
+/api/auth/register        → api/auth/[[...slug]].ts     slug=['register']
+/api/bookings             → api/bookings/[[...slug]].ts slug=[]
+/api/bookings/:id         → api/bookings/[[...slug]].ts slug=[':id']
+/api/payments/mpesa-stk   → api/payments/[[...slug]].ts slug=['mpesa-stk']
+/api/payments/transactions→ api/payments/[[...slug]].ts slug=['transactions']
 ```
 
 ---
 
-## 🚀 Getting Started
+## Project Structure
+
+```
+autoflow/
+├── api/                             # Vercel Serverless Functions (12 total)
+│   ├── _lib/
+│   │   ├── auth.ts                  # generateToken, requireAuth, requireRole
+│   │   ├── db.ts                    # Neon sql tagged template client
+│   │   ├── cors.ts                  # CORS headers + OPTIONS preflight handler
+│   │   └── email.ts                 # HTML email templates via Nodemailer
+│   ├── auth/[[...slug]].ts          # login, register, me, forgot-password, Google OAuth, KYC
+│   ├── bookings/[[...slug]].ts      # Full CRUD + status transitions
+│   ├── services/[[...slug]].ts      # Service catalog CRUD
+│   ├── locations/[[...slug]].ts     # Location CRUD
+│   ├── users/[[...slug]].ts         # User management, /staff, /lookup
+│   ├── vehicles/[[...slug]].ts      # Customer vehicle CRUD
+│   ├── payments/[[...slug]].ts      # mpesa-stk, mpesa-callback, status, transactions
+│   ├── detailer/[[...slug]].ts      # earnings, schedule
+│   ├── analytics/index.ts           # Business analytics aggregation
+│   ├── notifications/index.ts       # Notification read/mark-read
+│   ├── loyalty/index.ts             # Points balance and history
+│   ├── admin/approvals.ts           # Owner onboarding approval workflow
+│   └── tsconfig.json
+│
+├── src/
+│   ├── lib/
+│   │   ├── api.ts                   # Typed fetch wrapper with auto Bearer token
+│   │   ├── wdk.ts                   # Tether WDK: wallet lifecycle + USDT transfers
+│   │   ├── crypto.ts                # Unified payment: WDK + injected wallet (MetaMask etc.)
+│   │   ├── prices.ts                # Chainlink on-chain feeds + CoinGecko fallback
+│   │   └── utils.ts                 # shadcn cn() helper
+│   ├── contexts/
+│   │   └── AuthContext.tsx          # JWT auth state, role-based routing
+│   ├── components/
+│   │   ├── layout/DashboardLayout.tsx
+│   │   ├── shared/SharedComponents.tsx  # StatCard, PageHeader, StatusBadge, EmptyState
+│   │   └── ui/                      # shadcn/ui component library
+│   └── pages/
+│       ├── LandingPage.tsx
+│       ├── LoginPage.tsx
+│       ├── RegisterPage.tsx
+│       ├── RoadmapPage.tsx
+│       ├── SettingsPage.tsx
+│       ├── ForgotPasswordPage.tsx
+│       ├── customer/
+│       │   ├── CustomerDashboard.tsx
+│       │   ├── BookService.tsx          # 3-step booking + M-Pesa/USDT/USDC payment
+│       │   ├── CustomerWallet.tsx       # WDK wallet + Chainlink live prices
+│       │   ├── CustomerBookings.tsx
+│       │   ├── CustomerPayments.tsx
+│       │   ├── CustomerVehicles.tsx
+│       │   ├── CustomerLiveView.tsx     # Agora video UI (backend pending)
+│       │   └── CustomerLoyalty.tsx      # Points + NFT tier display
+│       ├── detailer/
+│       │   ├── DetailerDashboard.tsx
+│       │   ├── DetailerJobs.tsx         # Job management + Go Live button
+│       │   ├── DetailerSchedule.tsx
+│       │   └── DetailerEarnings.tsx
+│       ├── owner/
+│       │   ├── OwnerDashboard.tsx
+│       │   ├── OwnerAnalytics.tsx
+│       │   ├── OwnerBookings.tsx
+│       │   ├── OwnerServices.tsx
+│       │   ├── OwnerLocations.tsx
+│       │   ├── OwnerStaff.tsx
+│       │   ├── OwnerPayments.tsx
+│       │   ├── OwnerAIInsights.tsx      # Kite AI UI (backend pending)
+│       │   └── OwnerStaking.tsx         # Suzaku UI (backend pending)
+│       └── admin/
+│           ├── AdminDashboard.tsx
+│           ├── AdminUsers.tsx
+│           ├── AdminBookings.tsx
+│           ├── AdminTransactions.tsx
+│           ├── AdminServices.tsx
+│           └── AdminApprovals.tsx
+│
+├── vercel.json                      # outputDirectory + SPA fallback rewrite
+├── .env.local                       # Local environment variables
+└── package.json
+```
+
+---
+
+## Local Development
+
+### Prerequisites
+
+- Node.js 18+
+- npm 9+
+
+### Setup
 
 ```bash
-# Clone the repository
-git clone <YOUR_GIT_URL>
-cd autoflow
-
-# Install dependencies
+git clone <repo-url>
+cd autoflow-the-car-care-hub
 npm install
-
-# Start development server
-npm run dev
 ```
 
-The app runs at `http://localhost:5173`
+Create `.env.local` with the following variables:
 
-### Demo Routes
+```env
+# Database (Neon PostgreSQL)
+DATABASE_URL=postgresql://...
 
-| Role | URL | Demo User |
-|------|-----|-----------|
-| Landing | `/` | — |
-| Customer | `/customer` | James Mwangi |
-| Detailer | `/detailer` | Peter Ochieng |
-| Owner | `/owner` | David Kamau |
-| Admin | `/admin` | Sarah Njeri |
+# Auth
+JWT_SECRET=your-jwt-secret
 
----
+# M-Pesa Daraja API (Safaricom sandbox)
+MPESA_CONSUMER_KEY=...
+MPESA_CONSUMER_SECRET=...
+MPESA_SHORTCODE=174379
+MPESA_PASSKEY=...
 
-## 🔐 Backend Implementation Roadmap
+# Email (Gmail SMTP with App Password)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your@gmail.com
+SMTP_PASS=your-app-password
 
-### Phase 1: Core Infrastructure
-1. Enable Supabase/Lovable Cloud
-2. Set up database tables: users, vehicles, services, locations, bookings, transactions
-3. Implement Row Level Security (RLS) policies per role
-4. Authentication with email/password + wallet connect
+# Google OAuth
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
 
-### Phase 2: Payments (Tether + Chainlink)
-1. Deploy payment escrow smart contract on Avalanche Fuji testnet
-2. Integrate Tether WDK SDK for wallet connections
-3. Set up Chainlink price feed reader contract
-4. Build Edge Function for price caching
-5. Implement M-Pesa STK Push via Safaricom Daraja API
+# App URL
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-### Phase 3: AI & Real-Time (Kite AI + Agora)
-1. Build data aggregation pipeline for AI insights
-2. Integrate Kite AI inference API
-3. Set up Agora token server Edge Function
-4. Implement video streaming in React components
+# Avalanche / Tether WDK
+# No API key needed — public RPC for Chainlink reads and WDK wallet operations
+VITE_AVAX_RPC=https://api.avax.network/ext/bc/C/rpc
+VITE_AUTOFLOW_WALLET=0x6D7df05eda7A6142503315DA1ef8Dc26714ed9a4
+```
 
-### Phase 4: Loyalty & DeFi (DH3 + Suzaku)
-1. Deploy soulbound NFT membership contract
-2. Integrate DH3 protocol for identity
-3. Connect Suzaku liquid staking for owner yields
+### Run
 
----
-
-## 🎨 Design System
-
-- **Fonts**: DM Serif Display (headings) + DM Sans (body)
-- **Colors**: Forest green primary (`hsl(152, 35%, 25%)`) + Gold accent (`hsl(36, 80%, 55%)`)
-- **Dark mode**: Full dark theme with warm gold primary swap
-- **Components**: shadcn/ui with custom design tokens
-- **Animations**: Framer Motion throughout
+```bash
+npm run dev        # Vite frontend (http://localhost:5173)
+npm run dev:api    # Vercel dev server for API (http://localhost:3000)
+npm run dev:full   # Both together
+npm run build      # Production build
+```
 
 ---
 
-## 📄 License
+## Demo
+
+**Live:** [https://autoflowbuzz.vercel.app](https://autoflowbuzz.vercel.app)
+
+| Role | Registration | Notes |
+|------|-------------|-------|
+| Customer | Register → instant access | Full booking + payment flow |
+| Detailer | Register → instant access | Job management, schedule |
+| Business Owner | Register → admin approval required | Dashboard unlocked after approval |
+| Admin | Contact team | Platform-wide management |
+
+### Test M-Pesa (Sandbox)
+Use phone number `254708374149` and any 6-digit PIN when the STK Push arrives.
+
+### Test Crypto (WDK Wallet)
+1. Go to **Wallet** → **AutoFlow Wallet (WDK)** → **Create Wallet**
+2. Save your seed phrase
+3. Fund the wallet address with USDT on Avalanche C-Chain
+4. Book a service and choose USDT at checkout
+
+---
+
+## Payment Methods
+
+| Method | Status | Details |
+|--------|--------|---------|
+| M-Pesa STK Push | ✅ Live | Safaricom Daraja sandbox |
+| USDT via WDK wallet | ✅ Live | Self-custodial, no MetaMask needed |
+| USDT via MetaMask/Core | ✅ Live | Injected wallet on Avalanche C-Chain |
+| USDC | ✅ Live | Same flow as USDT |
+| Cash on Arrival | ✅ Live | Booking recorded, offline collection |
+| Card (Stripe) | 🔜 Roadmap | — |
+
+AutoFlow takes **10% commission** on all platform-processed payments. Detailers receive **40% of service price**; the remainder goes to the business owner.
+
+---
+
+## Database Schema (Key Tables)
+
+```sql
+users               id, email, password_hash, first_name, last_name, phone,
+                    role, google_id, approval_status, wallet_address, is_verified
+
+locations           id, owner_id, name, address, city, lat, lng, is_active
+
+services            id, owner_id, location_id, name, category,
+                    price_kes, duration_minutes, is_active
+
+bookings            id, customer_id, detailer_id, service_id, location_id,
+                    scheduled_date, scheduled_time, status, payment_status,
+                    payment_method, total_amount
+
+transactions        id, booking_id, customer_id, amount_kes, amount_usd,
+                    method, status, mpesa_code, mpesa_checkout_request_id,
+                    crypto_tx_hash, crypto_token, crypto_network
+
+vehicles            id, customer_id, make, model, year, color, license_plate
+
+detailer_schedules  detailer_id, day_of_week, start_time, end_time, is_available
+
+loyalty_points      id, customer_id, booking_id, points, description
+
+notifications       id, user_id, title, message, type, is_read
+
+owner_applications  id, user_id, business_name, business_address,
+                    id_doc_name, id_doc_data, photos, status
+```
+
+---
+
+## Design System
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| Primary | `hsl(152, 35%, 25%)` forest green | Buttons, links, active states |
+| Accent | `hsl(36, 80%, 55%)` gold | Loyalty tiers, highlights |
+| Font headings | DM Serif Display | Page titles, card headers |
+| Font body | DM Sans | All body text, UI copy |
+| Dark mode | Full — warm gold primary swaps in | Toggled via ThemeProvider |
+
+---
+
+## Roadmap
+
+### Near Term
+- [ ] Agora RTC token server → live video between customer and detailer
+- [ ] Kite AI API → real AI insights from actual booking + revenue data
+- [ ] Record `crypto_tx_hash` on bookings after WDK payment confirmation
+- [ ] WDK seed encryption with WebCrypto AES-GCM before localStorage
+
+### Smart Contracts (Avalanche Fuji Testnet)
+- [ ] `AutoFlowMembership.sol` — soulbound ERC-721 for DH3 NFT loyalty tiers
+- [ ] Payment escrow — hold USDT until service completion, then auto-release
+- [ ] Suzaku staking wrapper — sAVAX deposit/withdrawal for owner yield
+
+### Production Hardening
+- [ ] Switch M-Pesa to live Daraja credentials
+- [ ] API rate limiting
+- [ ] Stripe card payments
+- [ ] FCM push notifications
+
+---
+
+## License
 
 Built for the Avalanche Hackathon 2026. All rights reserved.

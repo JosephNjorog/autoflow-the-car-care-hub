@@ -1,16 +1,4 @@
-import { neon, neonConfig } from '@neondatabase/serverless';
-
-// Some environments (e.g. local dev on machines where IPv6 is unreachable) fail to
-// reach Neon's HTTP API with Node's native fetch. Forcing IPv4 via undici fixes this.
-// undici is bundled with Node.js 18+ and safe to use on Vercel (which also supports IPv4).
-try {
-  const { Agent, fetch: undiciFetch } = await import('undici');
-  const agent = new Agent({ connect: { family: 4 } as object });
-  neonConfig.fetchFunction = (url: string, opts: RequestInit) =>
-    (undiciFetch as unknown as typeof fetch)(url, { ...(opts as RequestInit), dispatcher: agent } as RequestInit);
-} catch {
-  // undici unavailable — fall back to native fetch (works on Vercel Edge runtime)
-}
+import { neon } from '@neondatabase/serverless';
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is required');

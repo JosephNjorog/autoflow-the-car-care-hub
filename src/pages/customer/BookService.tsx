@@ -16,6 +16,7 @@ import {
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { runCryptoPayment, isWalletAvailable, type CryptoPaymentStep } from '@/lib/crypto';
 
 type ServiceMode = 'all' | 'irl' | 'mobile';
 
@@ -38,7 +39,7 @@ export default function BookService() {
   const [isCreatingBooking, setIsCreatingBooking] = useState(false);
   const [pollCount, setPollCount] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [cryptoStep, setCryptoStep] = useState<'idle' | 'connecting' | 'signing' | 'confirming'>('idle');
+  const [cryptoStep, setCryptoStep] = useState<CryptoPaymentStep>('idle');
 
   const { data: locations = [], isLoading: loadingLocations } = useQuery({
     queryKey: ['locations'],
@@ -118,16 +119,20 @@ export default function BookService() {
         setStep('paying');
         startPolling(booking.id);
       } else if (paymentMethod === 'usdt' || paymentMethod === 'usdc') {
-        // Simulate wallet connect → sign → confirm flow
         setStep('paying');
-        setCryptoStep('connecting');
-        await new Promise(r => setTimeout(r, 1200));
-        setCryptoStep('signing');
-        await new Promise(r => setTimeout(r, 1000));
-        setCryptoStep('confirming');
-        await new Promise(r => setTimeout(r, 900));
-        setCryptoStep('idle');
-        setStep('confirmed');
+        try {
+          await runCryptoPayment(
+            paymentMethod as 'usdt' | 'usdc',
+            parseFloat(usdAmount),
+            { onStep: setCryptoStep }
+          );
+          setStep('confirmed');
+        } catch (cryptoErr) {
+          const cryptoMsg = cryptoErr instanceof Error ? cryptoErr.message : 'Crypto payment failed';
+          toast({ title: 'Payment Failed', description: cryptoMsg, variant: 'destructive' });
+          setCryptoStep('idle');
+          setStep('checkout');
+        }
       } else {
         setStep('confirmed');
       }
@@ -172,12 +177,14 @@ export default function BookService() {
   if (step === 'paying') {
     const isCrypto = paymentMethod === 'usdt' || paymentMethod === 'usdc';
     const cryptoLabel = paymentMethod.toUpperCase();
-    const cryptoStepLabels: Record<typeof cryptoStep, string> = {
+    const cryptoStepLabels: Record<string, string> = {
       idle: 'Initiating...',
-      connecting: `Connecting wallet...`,
-      signing: 'Waiting for signature...',
-      confirming: 'Broadcasting to Avalanche...',
+      connecting: 'Connecting to wallet...',
+      switching: 'Switching to Avalanche C-Chain...',
+      signing: 'Approve the transaction in your wallet...',
+      confirming: 'Confirming on-chain...',
     };
+    const cryptoSteps = ['connecting', 'switching', 'signing', 'confirming'] as const;
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-20 text-center max-w-md mx-auto">
@@ -190,10 +197,14 @@ export default function BookService() {
               <p className="text-muted-foreground mb-2">
                 Sending <strong>${usdAmount} {cryptoLabel}</strong> on Avalanche C-Chain
               </p>
+              {!isWalletAvailable() && (
+                <p className="text-xs text-destructive mb-4">
+                  No wallet detected. Please install MetaMask or open this in Trust Wallet's browser.
+                </p>
+              )}
               <div className="flex flex-col gap-2 w-full mb-8">
-                {(['connecting', 'signing', 'confirming'] as const).map((s, i) => {
-                  const steps = ['connecting', 'signing', 'confirming'] as const;
-                  const currentIdx = steps.indexOf(cryptoStep as any);
+                {cryptoSteps.map((s, i) => {
+                  const currentIdx = cryptoSteps.indexOf(cryptoStep as typeof cryptoSteps[number]);
                   const isDone = currentIdx > i;
                   const isActive = cryptoStep === s;
                   return (
@@ -307,11 +318,20 @@ export default function BookService() {
 
           {(paymentMethod === 'usdt' || paymentMethod === 'usdc') && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
-              className="rounded-lg bg-accent/5 border border-accent/20 p-3 mb-4">
-              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <Zap className="w-3 h-3 text-accent" />
-                <span>Rate via <span className="font-medium text-foreground">Chainlink Data Feeds</span>: 1 USD = {conversionRate} KES</span>
-              </p>
+              className="space-y-2 mb-4">
+              <div className="rounded-lg bg-accent/5 border border-accent/20 p-3">
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <Zap className="w-3 h-3 text-accent" />
+                  <span>Rate via <span className="font-medium text-foreground">Chainlink Data Feeds</span>: 1 USD = {conversionRate} KES</span>
+                </p>
+              </div>
+              {!isWalletAvailable() && (
+                <div className="rounded-lg bg-destructive/5 border border-destructive/20 p-3">
+                  <p className="text-xs text-destructive">
+                    ⚠️ No crypto wallet detected. Install <a href="https://metamask.io" target="_blank" rel="noopener noreferrer" className="underline font-medium">MetaMask</a> or open this page in <a href="https://trustwallet.com" target="_blank" rel="noopener noreferrer" className="underline font-medium">Trust Wallet</a>'s browser to pay with crypto.
+                  </p>
+                </div>
+              )}
             </motion.div>
           )}
 

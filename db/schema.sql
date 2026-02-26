@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   scheduled_time TIME NOT NULL,
   status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'in_progress', 'completed', 'cancelled')),
   payment_status VARCHAR(20) DEFAULT 'pending' CHECK (payment_status IN ('pending', 'completed', 'failed', 'refunded')),
-  payment_method VARCHAR(20) CHECK (payment_method IN ('mpesa', 'crypto', 'card', 'cash')),
+  payment_method VARCHAR(20) CHECK (payment_method IN ('mpesa', 'crypto', 'usdt', 'usdc', 'card', 'cash')),
   before_photos TEXT[] DEFAULT '{}',
   after_photos TEXT[] DEFAULT '{}',
   rating INTEGER CHECK (rating BETWEEN 1 AND 5),

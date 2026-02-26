@@ -38,6 +38,7 @@ export default function BookService() {
   const [isCreatingBooking, setIsCreatingBooking] = useState(false);
   const [pollCount, setPollCount] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [cryptoStep, setCryptoStep] = useState<'idle' | 'connecting' | 'signing' | 'confirming'>('idle');
 
   const { data: locations = [], isLoading: loadingLocations } = useQuery({
     queryKey: ['locations'],
@@ -116,6 +117,17 @@ export default function BookService() {
         await api.post('/payments/mpesa-stk', { bookingId: booking.id, phone: mpesaPhone });
         setStep('paying');
         startPolling(booking.id);
+      } else if (paymentMethod === 'usdt' || paymentMethod === 'usdc') {
+        // Simulate wallet connect → sign → confirm flow
+        setStep('paying');
+        setCryptoStep('connecting');
+        await new Promise(r => setTimeout(r, 1200));
+        setCryptoStep('signing');
+        await new Promise(r => setTimeout(r, 1000));
+        setCryptoStep('confirming');
+        await new Promise(r => setTimeout(r, 900));
+        setCryptoStep('idle');
+        setStep('confirmed');
       } else {
         setStep('confirmed');
       }
@@ -156,25 +168,62 @@ export default function BookService() {
     );
   }
 
-  // ─── PAYING (M-Pesa STK Push pending) ─────────────
+  // ─── PAYING ────────────────────────────────────────
   if (step === 'paying') {
+    const isCrypto = paymentMethod === 'usdt' || paymentMethod === 'usdc';
+    const cryptoLabel = paymentMethod.toUpperCase();
+    const cryptoStepLabels: Record<typeof cryptoStep, string> = {
+      idle: 'Initiating...',
+      connecting: `Connecting wallet...`,
+      signing: 'Waiting for signature...',
+      confirming: 'Broadcasting to Avalanche...',
+    };
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-20 text-center max-w-md mx-auto">
           <div className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mb-6">
             <Loader2 className="w-10 h-10 text-primary animate-spin" />
           </div>
-          <h2 className="text-2xl font-display text-foreground mb-2">Waiting for M-Pesa</h2>
-          <p className="text-muted-foreground mb-2">An STK Push has been sent to <strong>{mpesaPhone}</strong></p>
-          <p className="text-sm text-muted-foreground mb-6">Enter your M-Pesa PIN on your phone to complete the payment of <strong>KES {selectedServiceData?.price?.toLocaleString()}</strong></p>
-          <div className="flex gap-2 text-xs text-muted-foreground mb-8">
-            {[...Array(20)].map((_, i) => (
-              <div key={i} className={`w-2 h-2 rounded-full ${i < pollCount ? 'bg-primary' : 'bg-muted'}`} />
-            ))}
-          </div>
-          <Button variant="outline" onClick={() => { if (pollRef.current) clearInterval(pollRef.current); setStep('checkout'); }}>
-            Cancel
-          </Button>
+          {isCrypto ? (
+            <>
+              <h2 className="text-2xl font-display text-foreground mb-2">Processing {cryptoLabel} Payment</h2>
+              <p className="text-muted-foreground mb-2">
+                Sending <strong>${usdAmount} {cryptoLabel}</strong> on Avalanche C-Chain
+              </p>
+              <div className="flex flex-col gap-2 w-full mb-8">
+                {(['connecting', 'signing', 'confirming'] as const).map((s, i) => {
+                  const steps = ['connecting', 'signing', 'confirming'] as const;
+                  const currentIdx = steps.indexOf(cryptoStep as any);
+                  const isDone = currentIdx > i;
+                  const isActive = cryptoStep === s;
+                  return (
+                    <div key={s} className={`flex items-center gap-3 p-3 rounded-lg border text-left text-sm transition-all ${isActive ? 'border-primary bg-primary/5' : isDone ? 'border-success/30 bg-success/5' : 'border-border'}`}>
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${isActive ? 'bg-primary' : isDone ? 'bg-success' : 'bg-muted'}`}>
+                        {isDone ? <CheckCircle className="w-3 h-3 text-white" /> : isActive ? <Loader2 className="w-3 h-3 text-white animate-spin" /> : <span className="text-[10px] text-muted-foreground">{i + 1}</span>}
+                      </div>
+                      <span className={isActive ? 'text-foreground font-medium' : isDone ? 'text-success' : 'text-muted-foreground'}>
+                        {cryptoStepLabels[s]}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <>
+              <h2 className="text-2xl font-display text-foreground mb-2">Waiting for M-Pesa</h2>
+              <p className="text-muted-foreground mb-2">An STK Push has been sent to <strong>{mpesaPhone}</strong></p>
+              <p className="text-sm text-muted-foreground mb-6">Enter your M-Pesa PIN on your phone to complete the payment of <strong>KES {selectedServiceData?.price?.toLocaleString()}</strong></p>
+              <div className="flex gap-2 text-xs text-muted-foreground mb-8">
+                {[...Array(20)].map((_, i) => (
+                  <div key={i} className={`w-2 h-2 rounded-full ${i < pollCount ? 'bg-primary' : 'bg-muted'}`} />
+                ))}
+              </div>
+              <Button variant="outline" onClick={() => { if (pollRef.current) clearInterval(pollRef.current); setStep('checkout'); }}>
+                Cancel
+              </Button>
+            </>
+          )}
         </div>
       </DashboardLayout>
     );

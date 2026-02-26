@@ -34,6 +34,7 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
             <a href="#how-it-works" className="hover:text-foreground transition-colors">How it Works</a>
+            <Link to="/roadmap" className="hover:text-foreground transition-colors">Roadmap</Link>
             <a href="#cta" className="hover:text-foreground transition-colors">Get Started</a>
           </div>
           <div className="flex items-center gap-2">
@@ -218,6 +219,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
             <Link to="/login" className="hover:text-foreground transition-colors">Sign In</Link>
             <Link to="/register" className="hover:text-foreground transition-colors">Register</Link>
+            <Link to="/roadmap" className="hover:text-foreground transition-colors">Roadmap</Link>
           </div>
         </div>
       </footer>

@@ -9,10 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, MapPin, Edit, Trash2, LocateFixed, Loader2, Navigation } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 const emptyForm = { name: '', address: '', city: 'Nairobi', lat: '', lng: '' };
 
 export default function OwnerLocations() {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -26,8 +28,9 @@ export default function OwnerLocations() {
   const queryClient = useQueryClient();
 
   const { data: locations = [], isLoading } = useQuery({
-    queryKey: ['locations'],
-    queryFn: () => api.get<any[]>('/locations'),
+    queryKey: ['locations', user?.id],
+    queryFn: () => api.get<any[]>(`/locations?ownerId=${user?.id}&activeOnly=false`),
+    enabled: !!user?.id,
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['locations'] });

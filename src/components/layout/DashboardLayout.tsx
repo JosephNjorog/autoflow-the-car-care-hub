@@ -37,7 +37,6 @@ const navItems: Record<UserRole, NavItem[]> = {
     { label: 'Locations', path: '/owner/locations', icon: <MapPin className="w-5 h-5" /> },
     { label: 'Analytics', path: '/owner/analytics', icon: <BarChart3 className="w-5 h-5" /> },
     { label: 'Payments', path: '/owner/payments', icon: <CreditCard className="w-5 h-5" /> },
-    { label: 'Roadmap', path: '/roadmap', icon: <CheckCircle className="w-5 h-5" /> },
   ],
   admin: [
     { label: 'Dashboard', path: '/admin', icon: <LayoutDashboard className="w-5 h-5" /> },

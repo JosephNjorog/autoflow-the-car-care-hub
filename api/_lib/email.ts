@@ -402,7 +402,7 @@ export async function sendStaffCredentials(
 ): Promise<void> {
   const content = `
     <h1>Welcome to the team, ${firstName}!</h1>
-    <p>${ownerBusinessName ? `<strong>${ownerBusinessName}</strong> has added you` : 'You've been added'} as a detailer on AutoFlow. Your account is ready — here are your login credentials.</p>
+    <p>${ownerBusinessName ? `<strong>${ownerBusinessName}</strong> has added you` : 'You have been added'} as a detailer on AutoFlow. Your account is ready — here are your login credentials.</p>
     <div class="credential-box">
       <p class="cred-label">Email</p>
       <p class="cred-value">${email}</p>

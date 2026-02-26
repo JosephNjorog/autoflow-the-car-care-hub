@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckCircle, Clock, Droplets, MapPin, Star, Search,
   SlidersHorizontal, Car, Smartphone, ChevronLeft, ChevronRight,
-  Wallet, CreditCard, Phone, Shield, Zap, ArrowLeft, Loader2
+  Wallet, CreditCard, Phone, Shield, Zap, ArrowLeft, Loader2, Banknote
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -276,13 +276,17 @@ export default function BookService() {
             </div>
           </div>
 
-          <h3 className="text-sm font-medium text-foreground mb-3">Pay with</h3>
+          <h3 className="text-sm font-medium text-foreground mb-1">Pay with</h3>
+          <p className="text-xs text-muted-foreground mb-3">
+            A 10% platform fee is included in all prices — this is how AutoFlow stays free for car wash owners.
+          </p>
           <div className="space-y-2 mb-4">
             {[
-              { id: 'mpesa', icon: Phone, label: 'M-Pesa', desc: 'Pay instantly via STK Push', badge: 'Popular' },
-              { id: 'card', icon: CreditCard, label: 'Card', desc: 'Visa, Mastercard', badge: '' },
+              { id: 'mpesa', icon: Phone, label: 'M-Pesa', desc: 'Pay instantly via STK Push', badge: 'Recommended' },
               { id: 'usdt', icon: Wallet, label: 'USDT (Tether)', desc: `≈ $${usdAmount} USDT on Avalanche`, badge: 'Web3' },
               { id: 'usdc', icon: Shield, label: 'USDC', desc: `≈ $${usdAmount} USDC on Avalanche`, badge: 'Web3' },
+              { id: 'card', icon: CreditCard, label: 'Card', desc: 'Visa, Mastercard', badge: '' },
+              { id: 'cash', icon: Banknote, label: 'Cash on Arrival', desc: 'Pay the detailer directly — last resort only', badge: 'Last resort' },
             ].map(m => (
               <button key={m.id} onClick={() => setPaymentMethod(m.id)}
                 className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all ${paymentMethod === m.id ? 'border-primary bg-primary/5 shadow-card' : 'border-border bg-card hover:border-primary/30'}`}>
@@ -339,9 +343,10 @@ export default function BookService() {
             {isCreatingBooking ? (
               <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing...</>
             ) : paymentMethod === 'mpesa' ? 'Pay with M-Pesa' :
-              paymentMethod === 'card' ? 'Pay with Card' :
               paymentMethod === 'usdt' ? 'Connect Wallet & Pay USDT' :
               paymentMethod === 'usdc' ? 'Connect Wallet & Pay USDC' :
+              paymentMethod === 'card' ? 'Pay with Card' :
+              paymentMethod === 'cash' ? 'Confirm Booking (Pay on Arrival)' :
               'Select payment method'}
           </Button>
         </div>

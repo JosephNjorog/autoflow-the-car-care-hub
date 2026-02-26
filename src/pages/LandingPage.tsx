@@ -86,10 +86,6 @@ export default function LandingPage() {
             transition={{ duration: 0.7 }}
             className="text-center max-w-3xl mx-auto"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium mb-6 tracking-wider uppercase">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-              Premium Car Wash · Kenya & Beyond
-            </div>
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-display text-foreground leading-tight mb-6">
               Car care that{' '}
               <em className="text-gradient not-italic">actually</em>
@@ -108,25 +104,6 @@ export default function LandingPage() {
             </div>
           </motion.div>
 
-          {/* Stats */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.3 }}
-            className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto"
-          >
-            {[
-              { value: '2K+', label: 'Cars Washed' },
-              { value: '98%', label: 'Satisfaction' },
-              { value: '4.9/5', label: 'Rating' },
-              { value: '50+', label: 'Detailers' },
-            ].map((stat, i) => (
-              <div key={i} className="text-center p-4 rounded-xl bg-card border border-border shadow-card">
-                <p className="text-2xl font-display text-foreground">{stat.value}</p>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider mt-1">{stat.label}</p>
-              </div>
-            ))}
-          </motion.div>
         </div>
       </section>
 

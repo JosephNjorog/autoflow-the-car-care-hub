@@ -1,23 +1,31 @@
 import { useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { PageHeader } from '@/components/shared/SharedComponents';
-import { Wallet, Copy, ExternalLink, ArrowUpDown, Shield, Zap, RefreshCw } from 'lucide-react';
+import { Wallet, Copy, ExternalLink, ArrowUpDown, Shield, Zap, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const priceFeeds = [
-  { pair: 'AVAX/USD', price: 38.42, change: '+2.14%', positive: true },
-  { pair: 'USDT/USD', price: 1.0001, change: '+0.01%', positive: true },
-  { pair: 'USDC/USD', price: 0.9999, change: '-0.01%', positive: false },
-  { pair: 'AVAX/KES', price: 4957.18, change: '+1.89%', positive: true },
-];
+import { useQuery } from '@tanstack/react-query';
+import { fetchLivePrices } from '@/lib/prices';
 
 export default function CustomerWallet() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'wallet' | 'prices' | 'history'>('wallet');
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+
+  const { data: prices, isLoading: pricesLoading, refetch: refetchPrices, isFetching } = useQuery({
+    queryKey: ['live-prices'],
+    queryFn: fetchLivePrices,
+    staleTime: 60_000,
+    retry: 2,
+  });
+
+  const priceFeeds = prices ? [
+    { pair: 'AVAX/USD', price: prices.avaxUsd, prefix: '$', decimals: 2 },
+    { pair: 'USDT/USD', price: prices.usdtUsd, prefix: '$', decimals: 4 },
+    { pair: 'USDC/USD', price: prices.usdcUsd, prefix: '$', decimals: 4 },
+    { pair: 'AVAX/KES', price: prices.avaxKes, prefix: 'KES ', decimals: 2 },
+  ] : [];
 
   const copyAddress = () => {
     if (walletAddress) {
@@ -30,12 +38,10 @@ export default function CustomerWallet() {
     toast({ title: 'Connecting...', description: `Opening ${name} connection dialog via Tether WDK.` });
   };
 
-  const refreshPrices = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-      toast({ title: 'Prices Updated', description: 'Live rates refreshed via Chainlink Data Feeds.' });
-    }, 1500);
+  const handleRefresh = () => {
+    refetchPrices().then(() => {
+      toast({ title: 'Prices Updated', description: 'Live rates refreshed.' });
+    });
   };
 
   return (

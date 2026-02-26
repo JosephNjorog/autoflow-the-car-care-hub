@@ -9,7 +9,7 @@
  */
 
 import WDK from '@tetherto/wdk';
-import WalletManagerEvm from '@tetherto/wdk-wallet-evm';
+import WalletManagerEvm, { WalletAccountReadOnlyEvm } from '@tetherto/wdk-wallet-evm';
 import { parseUnits } from 'ethers';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -93,7 +93,6 @@ export async function getWDKBalances(address: string): Promise<{
   usdt: string;
   usdc: string;
 }> {
-  const { WalletAccountReadOnlyEvm } = await import('@tetherto/wdk-wallet-evm');
   const readOnly = new WalletAccountReadOnlyEvm(address, { provider: AVAX_RPC });
 
   const [avaxWei, usdtRaw, usdcRaw] = await Promise.all([

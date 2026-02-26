@@ -37,14 +37,15 @@ The centrepiece crypto integration. We use the official `@tetherto/wdk` + `@teth
 **What's implemented:**
 
 | File | What it does |
-|------|-------------|
+| ------ | ------------- |
 | [`src/lib/wdk.ts`](src/lib/wdk.ts) | Full WDK integration: create wallet via `WDK.getRandomSeedPhrase()`, restore from seed, read AVAX/USDT/USDC balances via `WalletAccountReadOnlyEvm`, send USDT via `account.transfer()` |
 | [`src/lib/crypto.ts`](src/lib/crypto.ts) | Unified payment flow supporting both WDK embedded wallet and injected wallets (MetaMask, Core, Trust) |
 | [`src/pages/customer/CustomerWallet.tsx`](src/pages/customer/CustomerWallet.tsx) | Wallet UI: create/restore WDK wallet with seed phrase reveal, live balance display, external wallet connect |
-| [`src/pages/customer/BookService.tsx`](src/pages/customer/BookService.tsx) | USDT/USDC payment option at checkout with live KES→USD conversion |
+| [`src/pages/customer/BookService.tsx`](src/pages/customer/BookService.tsx) | USDT/USDC payment option at checkout with live KES/USD conversion |
 
 **WDK wallet flow:**
-```
+
+```text
 Customer clicks "Create Wallet"
   → WDK.getRandomSeedPhrase(12) generates BIP-39 seed phrase
   → WalletManagerEvm derives HD wallet address on Avalanche C-Chain
@@ -68,7 +69,7 @@ We read AVAX/USD, USDT/USD, and USDC/USD prices directly from Chainlink Aggregat
 **Feed addresses used (Avalanche C-Chain Mainnet):**
 
 | Feed | Contract Address |
-|------|----------|
+| ------ | ---------- |
 | AVAX/USD | `0xFF3EEb22B5E3dE6e705b44749C2559d704923FD` |
 | USDT/USD | `0xEBE676ee90Fe1112671f19b6B7459bC678B67e8` |
 | USDC/USD | `0xF096872672F44d6EBA71527d2277B5b7A1E4D63` |
@@ -76,7 +77,7 @@ We read AVAX/USD, USDT/USD, and USDC/USD prices directly from Chainlink Aggregat
 **What's implemented:**
 
 | File | What it does |
-|------|-------------|
+| ------ | ------------- |
 | [`src/lib/prices.ts`](src/lib/prices.ts) | Reads `latestRoundData()` from each AggregatorV3 via `JsonRpcProvider`, validates freshness (rejects data >1h old), falls back to CoinGecko if RPC unavailable |
 | [`src/pages/customer/CustomerWallet.tsx`](src/pages/customer/CustomerWallet.tsx) | Live prices tab — shows "Chainlink" or "CoinGecko fallback" source badge on each feed |
 | [`src/pages/customer/BookService.tsx`](src/pages/customer/BookService.tsx) | Checkout shows live KES/USD rate for accurate crypto payment amounts |
@@ -87,10 +88,11 @@ KES/USD has no Chainlink feed on Avalanche, so we use `open.er-api.com` (free, n
 
 ### 3. M-Pesa STK Push — Mobile Money Payments ✅
 
-Real M-Pesa integration via Safaricom Daraja API. Customer enters their phone number at checkout → receives STK Push on their phone → enters PIN → booking confirmed automatically via webhook callback.
+Real M-Pesa integration via Safaricom Daraja API. Customer enters their phone number at checkout, receives an STK Push on their phone, enters PIN, and the booking is confirmed automatically via webhook callback.
 
 **Flow:**
-```
+
+```text
 POST /api/payments/mpesa-stk
   → Initiates STK Push via Daraja API
   → Returns checkoutRequestId to poll against
@@ -107,7 +109,7 @@ POST /api/payments/mpesa-callback  (called by Safaricom)
 
 ### 4. Kite AI — AI Business Insights 🔜
 
-AI-powered analytics for business owners, running on the Kite AI decentralised inference network. The UI is complete — owners see a "Coming Soon" page that outlines all 6 planned insight types: dynamic pricing, customer retention alerts, staff optimisation, upsell recommendations, AI chat assistant, and revenue forecasting. Backend integration with Kite AI's inference API is on the roadmap.
+AI-powered analytics for business owners, running on the Kite AI decentralised inference network. The UI is complete — owners see a Coming Soon page that outlines all 6 planned insight types: dynamic pricing, customer retention alerts, staff optimisation, upsell recommendations, AI chat assistant, and revenue forecasting. Backend integration with Kite AI's inference API is on the roadmap.
 
 ---
 
@@ -132,7 +134,7 @@ Real-time video streaming so customers can watch their car being washed live. Fu
 ## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
+| ------- | ----------- |
 | **Frontend** | React 18, TypeScript, Vite 5 |
 | **UI** | Tailwind CSS, shadcn/ui, Radix UI primitives |
 | **Animations** | Framer Motion |
@@ -157,7 +159,7 @@ Real-time video streaming so customers can watch their car being washed live. Fu
 
 ### Request Flow
 
-```
+```text
 Browser (React SPA)
   │
   ├─ API calls (fetch + Bearer JWT)
@@ -188,20 +190,20 @@ Browser (React SPA)
 
 All grouped API routes use Vercel's `[[...slug]].ts` optional catch-all to stay within the 12-function Hobby plan limit:
 
-```
-/api/auth/login           → api/auth/[[...slug]].ts     slug=['login']
-/api/auth/register        → api/auth/[[...slug]].ts     slug=['register']
-/api/bookings             → api/bookings/[[...slug]].ts slug=[]
-/api/bookings/:id         → api/bookings/[[...slug]].ts slug=[':id']
-/api/payments/mpesa-stk   → api/payments/[[...slug]].ts slug=['mpesa-stk']
-/api/payments/transactions→ api/payments/[[...slug]].ts slug=['transactions']
+```text
+/api/auth/login            → api/auth/[[...slug]].ts      slug=['login']
+/api/auth/register         → api/auth/[[...slug]].ts      slug=['register']
+/api/bookings              → api/bookings/[[...slug]].ts  slug=[]
+/api/bookings/:id          → api/bookings/[[...slug]].ts  slug=[':id']
+/api/payments/mpesa-stk    → api/payments/[[...slug]].ts  slug=['mpesa-stk']
+/api/payments/transactions → api/payments/[[...slug]].ts  slug=['transactions']
 ```
 
 ---
 
 ## Project Structure
 
-```
+```text
 autoflow/
 ├── api/                             # Vercel Serverless Functions (12 total)
 │   ├── _lib/
@@ -234,7 +236,7 @@ autoflow/
 │   │   └── AuthContext.tsx          # JWT auth state, role-based routing
 │   ├── components/
 │   │   ├── layout/DashboardLayout.tsx
-│   │   ├── shared/SharedComponents.tsx  # StatCard, PageHeader, StatusBadge, EmptyState
+│   │   ├── shared/SharedComponents.tsx
 │   │   └── ui/                      # shadcn/ui component library
 │   └── pages/
 │       ├── LandingPage.tsx
@@ -325,8 +327,7 @@ GOOGLE_CLIENT_SECRET=...
 # App URL
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-# Avalanche / Tether WDK
-# No API key needed — public RPC for Chainlink reads and WDK wallet operations
+# Avalanche / Tether WDK — no API key needed, uses public RPC
 VITE_AVAX_RPC=https://api.avax.network/ext/bc/C/rpc
 VITE_AUTOFLOW_WALLET=0x6D7df05eda7A6142503315DA1ef8Dc26714ed9a4
 ```
@@ -334,8 +335,8 @@ VITE_AUTOFLOW_WALLET=0x6D7df05eda7A6142503315DA1ef8Dc26714ed9a4
 ### Run
 
 ```bash
-npm run dev        # Vite frontend (http://localhost:5173)
-npm run dev:api    # Vercel dev server for API (http://localhost:3000)
+npm run dev        # Vite frontend — http://localhost:5173
+npm run dev:api    # Vercel dev server for API — http://localhost:3000
 npm run dev:full   # Both together
 npm run build      # Production build
 ```
@@ -347,16 +348,18 @@ npm run build      # Production build
 **Live:** [https://autoflowbuzz.vercel.app](https://autoflowbuzz.vercel.app)
 
 | Role | Registration | Notes |
-|------|-------------|-------|
+| ------ | ------------- | ------- |
 | Customer | Register → instant access | Full booking + payment flow |
 | Detailer | Register → instant access | Job management, schedule |
 | Business Owner | Register → admin approval required | Dashboard unlocked after approval |
 | Admin | Contact team | Platform-wide management |
 
 ### Test M-Pesa (Sandbox)
+
 Use phone number `254708374149` and any 6-digit PIN when the STK Push arrives.
 
 ### Test Crypto (WDK Wallet)
+
 1. Go to **Wallet** → **AutoFlow Wallet (WDK)** → **Create Wallet**
 2. Save your seed phrase
 3. Fund the wallet address with USDT on Avalanche C-Chain
@@ -367,7 +370,7 @@ Use phone number `254708374149` and any 6-digit PIN when the STK Push arrives.
 ## Payment Methods
 
 | Method | Status | Details |
-|--------|--------|---------|
+| -------- | -------- | --------- |
 | M-Pesa STK Push | ✅ Live | Safaricom Daraja sandbox |
 | USDT via WDK wallet | ✅ Live | Self-custodial, no MetaMask needed |
 | USDT via MetaMask/Core | ✅ Live | Injected wallet on Avalanche C-Chain |
@@ -415,7 +418,7 @@ owner_applications  id, user_id, business_name, business_address,
 ## Design System
 
 | Token | Value | Usage |
-|-------|-------|-------|
+| ------- | ------- | ------- |
 | Primary | `hsl(152, 35%, 25%)` forest green | Buttons, links, active states |
 | Accent | `hsl(36, 80%, 55%)` gold | Loyalty tiers, highlights |
 | Font headings | DM Serif Display | Page titles, card headers |
@@ -427,17 +430,20 @@ owner_applications  id, user_id, business_name, business_address,
 ## Roadmap
 
 ### Near Term
+
 - [ ] Agora RTC token server → live video between customer and detailer
 - [ ] Kite AI API → real AI insights from actual booking + revenue data
 - [ ] Record `crypto_tx_hash` on bookings after WDK payment confirmation
 - [ ] WDK seed encryption with WebCrypto AES-GCM before localStorage
 
 ### Smart Contracts (Avalanche Fuji Testnet)
+
 - [ ] `AutoFlowMembership.sol` — soulbound ERC-721 for DH3 NFT loyalty tiers
 - [ ] Payment escrow — hold USDT until service completion, then auto-release
 - [ ] Suzaku staking wrapper — sAVAX deposit/withdrawal for owner yield
 
 ### Production Hardening
+
 - [ ] Switch M-Pesa to live Daraja credentials
 - [ ] API rate limiting
 - [ ] Stripe card payments

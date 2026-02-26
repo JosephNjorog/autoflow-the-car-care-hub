@@ -1,4 +1,15 @@
+/**
+ * Crypto Payment Flow
+ *
+ * Two payment paths:
+ *   1. Injected wallet (MetaMask, Core Wallet, Trust Wallet) — window.ethereum
+ *   2. WDK in-app wallet (Tether WDK embedded wallet, no extension needed)
+ *
+ * Both send USDT or USDC on Avalanche C-Chain to the AutoFlow payment wallet.
+ */
+
 import { BrowserProvider, Contract, parseUnits } from 'ethers';
+import { sendViaWDK, hasWDKWallet, type WDKPaymentStep } from './wdk';
 
 // ─── Avalanche C-Chain Config ─────────────────────────────────────────────────
 
@@ -10,7 +21,7 @@ const AVALANCHE_CHAIN = {
   blockExplorerUrls: ['https://snowtrace.io/'],
 };
 
-// USDT and USDC token addresses on Avalanche C-Chain mainnet
+// USDT and USDC token addresses on Avalanche C-Chain Mainnet
 const TOKENS: Record<string, { address: string; decimals: number }> = {
   usdt: { address: '0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7', decimals: 6 },
   usdc: { address: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E', decimals: 6 },
@@ -30,6 +41,8 @@ declare global {
     ethereum?: {
       isMetaMask?: boolean;
       isTrust?: boolean;
+      isCoinbaseWallet?: boolean;
+      isCore?: boolean;
       request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
       on: (event: string, handler: (...args: unknown[]) => void) => void;
     };
@@ -38,49 +51,54 @@ declare global {
 
 // ─── Wallet Detection ─────────────────────────────────────────────────────────
 
-export function isWalletAvailable(): boolean {
+export function isInjectedWalletAvailable(): boolean {
   return typeof window !== 'undefined' && !!window.ethereum;
 }
 
-export function getWalletName(): string {
+/** @deprecated use isInjectedWalletAvailable */
+export function isWalletAvailable(): boolean {
+  return isInjectedWalletAvailable();
+}
+
+export function isWDKWalletAvailable(): boolean {
+  return hasWDKWallet();
+}
+
+export function getInjectedWalletName(): string {
   if (!window.ethereum) return 'No wallet';
+  if (window.ethereum.isCore) return 'Core Wallet';
   if (window.ethereum.isTrust) return 'Trust Wallet';
   if (window.ethereum.isMetaMask) return 'MetaMask';
+  if (window.ethereum.isCoinbaseWallet) return 'Coinbase Wallet';
   return 'Web3 Wallet';
 }
 
-// ─── Connect Wallet ───────────────────────────────────────────────────────────
+// ─── Injected Wallet: Connect ────────────────────────────────────────────────
 
-export async function connectWallet(): Promise<string> {
+export async function connectInjectedWallet(): Promise<string> {
   if (!window.ethereum) {
     throw new Error(
-      'No crypto wallet found. Please install MetaMask or Trust Wallet, or use the mobile Trust Wallet app.'
+      'No crypto wallet found. Install MetaMask, Core Wallet, or Trust Wallet.'
     );
   }
-
   const provider = new BrowserProvider(window.ethereum);
   const accounts = (await provider.send('eth_requestAccounts', [])) as string[];
-
   if (!accounts || accounts.length === 0) {
     throw new Error('No accounts found. Please unlock your wallet.');
   }
-
   return accounts[0];
 }
 
-// ─── Switch to Avalanche ──────────────────────────────────────────────────────
+// ─── Injected Wallet: Switch to Avalanche ────────────────────────────────────
 
 export async function switchToAvalanche(): Promise<void> {
   if (!window.ethereum) throw new Error('No wallet found.');
-
   try {
-    // First try switching (works if chain already added)
     await window.ethereum.request({
       method: 'wallet_switchEthereumChain',
       params: [{ chainId: AVALANCHE_CHAIN.chainId }],
     });
   } catch {
-    // Chain not added — add it
     await window.ethereum.request({
       method: 'wallet_addEthereumChain',
       params: [AVALANCHE_CHAIN],
@@ -88,9 +106,9 @@ export async function switchToAvalanche(): Promise<void> {
   }
 }
 
-// ─── Send USDT / USDC Payment ─────────────────────────────────────────────────
+// ─── Injected Wallet: Send USDT / USDC ───────────────────────────────────────
 
-export async function sendCryptoPayment(
+export async function sendCryptoPaymentInjected(
   token: 'usdt' | 'usdc',
   usdAmount: number,
   recipientAddress: string
@@ -98,65 +116,86 @@ export async function sendCryptoPayment(
   if (!window.ethereum) throw new Error('No wallet found.');
 
   const tokenInfo = TOKENS[token];
-  if (!tokenInfo) throw new Error(`Unsupported token: ${token}`);
-
   if (!recipientAddress || recipientAddress === '0x0000000000000000000000000000000000000000') {
     throw new Error('AutoFlow payment wallet not configured. Please contact support.');
   }
 
   const provider = new BrowserProvider(window.ethereum);
   const signer = await provider.getSigner();
-
   const contract = new Contract(tokenInfo.address, ERC20_ABI, signer);
 
-  // Convert USD amount to token units (6 decimals for USDT/USDC)
   const amountInUnits = parseUnits(usdAmount.toFixed(6), tokenInfo.decimals);
-
-  // Check balance
   const address = await signer.getAddress();
   const balance = await contract.balanceOf(address) as bigint;
+
   if (balance < amountInUnits) {
-    const balanceFormatted = (Number(balance) / 10 ** tokenInfo.decimals).toFixed(2);
+    const balFmt = (Number(balance) / 10 ** tokenInfo.decimals).toFixed(2);
     throw new Error(
-      `Insufficient ${token.toUpperCase()} balance. You have ${balanceFormatted} ${token.toUpperCase()}, need ${usdAmount.toFixed(2)}.`
+      `Insufficient ${token.toUpperCase()} balance. You have ${balFmt} ${token.toUpperCase()}, need ${usdAmount.toFixed(2)}.`
     );
   }
 
-  // Send the transfer
   const tx = await contract.transfer(recipientAddress, amountInUnits);
   const receipt = await tx.wait();
-
   return (receipt as { hash: string }).hash;
 }
 
-// ─── Full Payment Flow ────────────────────────────────────────────────────────
+// ─── Payment Steps ────────────────────────────────────────────────────────────
 
-export type CryptoPaymentStep = 'idle' | 'connecting' | 'switching' | 'signing' | 'confirming';
+export type CryptoPaymentStep =
+  | 'idle'
+  | 'connecting'
+  | 'switching'
+  | 'signing'
+  | 'confirming'
+  | 'preparing';   // WDK-specific step
+
+export type PaymentWalletType = 'injected' | 'wdk';
 
 export interface CryptoPaymentCallbacks {
   onStep: (step: CryptoPaymentStep) => void;
 }
 
+// ─── Full Payment Flow ────────────────────────────────────────────────────────
+
+/**
+ * Run the full crypto payment flow.
+ *
+ * @param token      - 'usdt' or 'usdc'
+ * @param usdAmount  - amount in USD
+ * @param callbacks  - step callbacks for UX feedback
+ * @param walletType - 'injected' (MetaMask etc.) or 'wdk' (Tether WDK in-app wallet)
+ */
 export async function runCryptoPayment(
   token: 'usdt' | 'usdc',
   usdAmount: number,
-  callbacks: CryptoPaymentCallbacks
+  callbacks: CryptoPaymentCallbacks,
+  walletType: PaymentWalletType = 'injected'
 ): Promise<string> {
   const recipientWallet = import.meta.env.VITE_AUTOFLOW_WALLET as string;
 
+  if (walletType === 'wdk') {
+    return sendViaWDK(token, usdAmount, recipientWallet, {
+      onStep: (step: WDKPaymentStep) => callbacks.onStep(step as CryptoPaymentStep),
+    });
+  }
+
+  // Injected wallet flow
   callbacks.onStep('connecting');
-  await connectWallet();
+  await connectInjectedWallet();
 
   callbacks.onStep('switching');
   await switchToAvalanche();
 
   callbacks.onStep('signing');
-  const txHash = await sendCryptoPayment(token, usdAmount, recipientWallet);
+  const txHash = await sendCryptoPaymentInjected(token, usdAmount, recipientWallet);
 
   callbacks.onStep('confirming');
-  // Brief pause for UX — tx.wait() already confirmed on-chain
   await new Promise(r => setTimeout(r, 800));
 
   callbacks.onStep('idle');
   return txHash;
 }
+
+// Keep old name as alias for compatibility
+export const connectWallet = connectInjectedWallet;

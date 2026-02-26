@@ -158,7 +158,8 @@ async function handleById(req: VercelRequest, res: VercelResponse, id: string) {
 // ── Router ────────────────────────────────────────────────────────────────────
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
-  const slug = (req.query.slug as string[] | undefined) ?? [];
+  const urlPath = (req.url ?? '').split('?')[0];
+  const slug = urlPath.replace(/^\/api\/[^/]+\/?/, '').split('/').filter(Boolean);
 
   if (slug.length === 0) return handleIndex(req, res);
   if (slug[0] === 'lookup') return handleLookup(req, res);

@@ -188,7 +188,8 @@ async function handleTransactions(req: VercelRequest, res: VercelResponse) {
 // ── Router ────────────────────────────────────────────────────────────────────
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
-  const slug = (req.query.slug as string[] | undefined) ?? [];
+  const urlPath = (req.url ?? '').split('?')[0];
+  const slug = urlPath.replace(/^\/api\/[^/]+\/?/, '').split('/').filter(Boolean);
   const route = slug.join('/');
 
   if (route === 'mpesa-stk')      return handleMpesaStk(req, res);

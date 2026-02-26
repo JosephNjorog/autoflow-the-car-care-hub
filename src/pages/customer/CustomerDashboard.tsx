@@ -22,7 +22,7 @@ export default function CustomerDashboard() {
 
   const { data: transactions = [] } = useQuery({
     queryKey: ['transactions'],
-    queryFn: () => api.get<any[]>('/transactions'),
+    queryFn: () => api.get<any[]>('/payments/transactions'),
   });
 
   const upcomingBookings = bookings.filter((b: any) =>

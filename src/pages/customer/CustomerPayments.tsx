@@ -7,7 +7,7 @@ import { api } from '@/lib/api';
 export default function CustomerPayments() {
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ['transactions'],
-    queryFn: () => api.get<any[]>('/transactions'),
+    queryFn: () => api.get<any[]>('/payments/transactions'),
   });
 
   return (

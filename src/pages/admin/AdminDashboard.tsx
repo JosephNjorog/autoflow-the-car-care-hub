@@ -10,7 +10,7 @@ export default function AdminDashboard() {
   const { data: analytics } = useQuery({ queryKey: ['analytics'], queryFn: () => api.get<any>('/analytics') });
   const { data: users = [] } = useQuery({ queryKey: ['users'], queryFn: () => api.get<any[]>('/users') });
   const { data: bookings = [] } = useQuery({ queryKey: ['bookings'], queryFn: () => api.get<any[]>('/bookings') });
-  const { data: transactions = [] } = useQuery({ queryKey: ['transactions'], queryFn: () => api.get<any[]>('/transactions') });
+  const { data: transactions = [] } = useQuery({ queryKey: ['transactions'], queryFn: () => api.get<any[]>('/payments/transactions') });
   const { data: approvals = [] } = useQuery({ queryKey: ['approvals'], queryFn: () => api.get<any[]>('/admin/approvals') });
 
   const totalRevenue = transactions.filter((t: any) => t.status === 'completed').reduce((s: number, t: any) => s + parseFloat(t.amount || 0), 0);

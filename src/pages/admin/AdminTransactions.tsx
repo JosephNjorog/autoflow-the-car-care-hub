@@ -21,7 +21,7 @@ export default function AdminTransactions() {
 
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ['transactions'],
-    queryFn: () => api.get<any[]>('/transactions'),
+    queryFn: () => api.get<any[]>('/payments/transactions'),
   });
 
   const filtered = transactions

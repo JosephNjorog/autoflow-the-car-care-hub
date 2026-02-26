@@ -333,7 +333,7 @@ export default function BookService() {
               <div className="rounded-lg bg-accent/5 border border-accent/20 p-3">
                 <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                   <Zap className="w-3 h-3 text-accent" />
-                  <span>Rate via <span className="font-medium text-foreground">Chainlink Data Feeds</span>: 1 USD = {conversionRate} KES</span>
+                  <span>Live rate: 1 USD = {conversionRate.toFixed(2)} KES</span>
                 </p>
               </div>
               {!isWalletAvailable() && (

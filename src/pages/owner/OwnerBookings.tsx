@@ -126,11 +126,22 @@ export default function OwnerBookings() {
     queryFn: () => api.get<any[]>('/bookings'),
   });
 
-  // Offline staff (no app account)
+  // Offline staff (no app account) + online detailers — combined for assignment
   const { data: ownerStaff = [] } = useQuery({
     queryKey: ['owner-staff'],
     queryFn: () => api.get<StaffMember[]>('/users/staff'),
   });
+
+  const { data: onlineDetailers = [] } = useQuery({
+    queryKey: ['owner-detailers'],
+    queryFn: () => api.get<any[]>('/users?role=detailer'),
+  });
+
+  // Unified list: offline staff + online detailers
+  const allAssignable: { id: string; name: string; type: 'staff' | 'detailer' }[] = [
+    ...ownerStaff.map(s => ({ id: s.id, name: s.name, type: 'staff' as const })),
+    ...onlineDetailers.map((d: any) => ({ id: d.id, name: d.name || `${d.firstName} ${d.lastName}`, type: 'detailer' as const })),
+  ];
 
   const filtered = bookings
     .filter((b: any) => filter === 'all' || b.status === filter)
@@ -145,17 +156,24 @@ export default function OwnerBookings() {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['bookings'] });
 
-  // Accept booking (optionally assign staff at same time)
-  const handleAccept = async (bookingId: string, serviceName: string, staffIdValue?: string) => {
+  // Resolve correct field name for assignment (offline staff → staffId, online detailer → detailerId)
+  const buildAssignBody = (assignableId: string): Record<string, unknown> => {
+    const person = allAssignable.find(a => a.id === assignableId);
+    if (!person) return {};
+    return person.type === 'detailer' ? { detailerId: assignableId } : { staffId: assignableId };
+  };
+
+  // Accept booking (optionally assign at same time)
+  const handleAccept = async (bookingId: string, serviceName: string, assignId?: string) => {
     setActioning(bookingId);
     try {
       const body: Record<string, unknown> = { status: 'confirmed' };
-      if (staffIdValue) body.staffId = staffIdValue;
+      if (assignId) Object.assign(body, buildAssignBody(assignId));
       await api.patch(`/bookings/${bookingId}`, body);
       invalidate();
-      if (staffIdValue) {
-        const staffName = ownerStaff.find(s => s.id === staffIdValue)?.name ?? 'Staff';
-        toast({ title: 'Booking Accepted & Assigned', description: `${serviceName} confirmed and assigned to ${staffName}.` });
+      if (assignId) {
+        const person = allAssignable.find(a => a.id === assignId);
+        toast({ title: 'Accepted & Assigned', description: `${serviceName} confirmed and assigned to ${person?.name ?? 'Staff'}.` });
       } else {
         toast({ title: 'Booking Accepted', description: `${serviceName} has been confirmed.` });
       }
@@ -182,15 +200,15 @@ export default function OwnerBookings() {
     }
   };
 
-  // Assign staff to an already-accepted booking
+  // Assign to an already-accepted booking
   const handleAssignStaff = async () => {
     if (!assignDialogBooking || !selectedStaff) return;
     setActioning(assignDialogBooking.id);
     try {
-      await api.patch(`/bookings/${assignDialogBooking.id}`, { staffId: selectedStaff });
+      await api.patch(`/bookings/${assignDialogBooking.id}`, buildAssignBody(selectedStaff));
       invalidate();
-      const staffName = ownerStaff.find(s => s.id === selectedStaff)?.name ?? 'Staff';
-      toast({ title: 'Staff Assigned', description: `${assignDialogBooking.serviceName} assigned to ${staffName}.` });
+      const person = allAssignable.find(a => a.id === selectedStaff);
+      toast({ title: 'Assigned', description: `${assignDialogBooking.serviceName} assigned to ${person?.name ?? 'Staff'}.` });
       setAssignDialogBooking(null);
       setSelectedStaff('');
     } catch (err) {

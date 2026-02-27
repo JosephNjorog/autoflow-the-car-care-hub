@@ -390,10 +390,11 @@ export default function BookService() {
               { id: 'mpesa', icon: Phone, label: 'M-Pesa', desc: 'Pay via STK Push to your phone', badge: 'Recommended' },
               { id: 'usdt', icon: Wallet, label: 'USDT (Tether)', desc: `≈ $${usdAmount} USDT on Avalanche`, badge: 'Web3' },
               { id: 'usdc', icon: Shield, label: 'USDC', desc: `≈ $${usdAmount} USDC on Avalanche`, badge: 'Web3' },
-              { id: 'card', icon: CreditCard, label: 'Card', desc: 'Visa, Mastercard', badge: '' },
+              { id: 'card', icon: CreditCard, label: 'Card', desc: 'Visa, Mastercard (coming soon)', badge: 'Soon', disabled: true },
             ].map(m => (
-              <button key={m.id} onClick={() => setPaymentMethod(m.id)}
-                className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all ${paymentMethod === m.id ? 'border-primary bg-primary/5 shadow-card' : 'border-border bg-card hover:border-primary/30'}`}>
+              <button key={m.id} onClick={() => !(m as any).disabled && setPaymentMethod(m.id)}
+                disabled={(m as any).disabled}
+                className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all ${(m as any).disabled ? 'border-border bg-card opacity-50 cursor-not-allowed' : paymentMethod === m.id ? 'border-primary bg-primary/5 shadow-card' : 'border-border bg-card hover:border-primary/30'}`}>
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${paymentMethod === m.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
                   <m.icon className="w-5 h-5" />
                 </div>
@@ -451,7 +452,6 @@ export default function BookService() {
             ) : paymentMethod === 'mpesa' ? 'Pay Now with M-Pesa' :
               paymentMethod === 'usdt' ? 'Connect Wallet & Pay USDT' :
               paymentMethod === 'usdc' ? 'Connect Wallet & Pay USDC' :
-              paymentMethod === 'card' ? 'Pay Now with Card' :
               'Select payment method'}
           </Button>
         </div>

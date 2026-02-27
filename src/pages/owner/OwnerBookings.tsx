@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { List, CalendarDays, ChevronLeft, ChevronRight, CheckCircle, XCircle, UserCog, Loader2 } from 'lucide-react';
+import { List, CalendarDays, ChevronLeft, ChevronRight, CheckCircle, XCircle, UserCog, Loader2, Bell } from 'lucide-react';
 import { api } from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

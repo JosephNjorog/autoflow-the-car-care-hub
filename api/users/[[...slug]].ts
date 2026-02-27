@@ -160,8 +160,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
   const urlPath = (req.url ?? '').split('?')[0];
   const slug = urlPath.replace(/^\/api\/[^/]+\/?/, '').split('/').filter(Boolean);
+  const route = slug.join('/');
 
-  if (slug.length === 0) return handleIndex(req, res);
+  if (slug.length === 0 || route === "index") return handleIndex(req, res);
   if (slug[0] === 'lookup') return handleLookup(req, res);
   if (slug[0] === 'staff')  return handleStaff(req, res);
   if (slug.length === 1)    return handleById(req, res, slug[0]);

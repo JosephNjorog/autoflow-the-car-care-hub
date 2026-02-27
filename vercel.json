@@ -2,6 +2,11 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/api/bookings",  "destination": "/api/bookings/index"  },
+    { "source": "/api/locations", "destination": "/api/locations/index" },
+    { "source": "/api/services",  "destination": "/api/services/index"  },
+    { "source": "/api/users",     "destination": "/api/users/index"     },
+    { "source": "/api/vehicles",  "destination": "/api/vehicles/index"  },
+    { "source": "/((?!api/).*)",  "destination": "/index.html"          }
   ]
 }

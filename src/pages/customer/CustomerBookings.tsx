@@ -10,7 +10,9 @@ import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, Clock, Loader2, ImageIcon, ShieldCheck, CalendarClock, X } from 'lucide-react';
+import { runCryptoPayment, isWalletAvailable, type CryptoPaymentStep } from '@/lib/crypto';
+import { fetchLivePrices } from '@/lib/prices';
+import { CheckCircle, Loader2, ImageIcon, ShieldCheck, CalendarClock, X, Phone, Wallet } from 'lucide-react';
 
 // ─── Photo Lightbox ───────────────────────────────────────────────────────────
 
@@ -46,6 +48,8 @@ export default function CustomerBookings() {
   const [mpesaPhone, setMpesaPhone] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [pickupPayStep, setPickupPayStep] = useState<'idle' | 'paying' | 'polling'>('idle');
+  const [pickupPayMethod, setPickupPayMethod] = useState<'mpesa' | 'usdt' | 'usdc'>('mpesa');
+  const [cryptoStep, setCryptoStep] = useState<CryptoPaymentStep>('idle');
   const [pollCount, setPollCount] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -57,6 +61,13 @@ export default function CustomerBookings() {
     queryKey: ['bookings'],
     queryFn: () => api.get<any[]>('/bookings'),
   });
+
+  const { data: livePrices } = useQuery({
+    queryKey: ['live-prices'],
+    queryFn: fetchLivePrices,
+    staleTime: 60_000,
+  });
+  const conversionRate = livePrices?.kesPerUsd ?? 129.05;
 
   const filters = ['all', 'pending', 'confirmed', 'in_progress', 'awaiting_confirmation', 'completed', 'cancelled'];
 
@@ -126,6 +137,28 @@ export default function CustomerBookings() {
     } catch (err) {
       setPickupPayStep('idle');
       toast({ title: 'Payment Failed', description: err instanceof Error ? err.message : 'Failed', variant: 'destructive' });
+    }
+  };
+
+  // Pay-at-pickup: crypto (USDT/USDC on Avalanche), then confirm on success
+  const handleCryptoAtPickup = async (booking: any, token: 'usdt' | 'usdc') => {
+    const usdAmount = (booking.servicePrice / conversionRate).toFixed(2);
+    setPickupPayStep('paying');
+    setCryptoStep('connecting');
+    try {
+      await runCryptoPayment(
+        token,
+        parseFloat(usdAmount),
+        { onStep: setCryptoStep },
+        'injected',
+        undefined,
+      );
+      setCryptoStep('idle');
+      await handleConfirmPickup(booking);
+    } catch (err) {
+      setCryptoStep('idle');
+      setPickupPayStep('idle');
+      toast({ title: 'Crypto Payment Failed', description: err instanceof Error ? err.message : 'Failed', variant: 'destructive' });
     }
   };
 
@@ -301,33 +334,72 @@ export default function CustomerBookings() {
                   ))}
                 </div>
               </div>
+            ) : pickupPayStep === 'paying' && (pickupPayMethod === 'usdt' || pickupPayMethod === 'usdc') ? (
+              <div className="text-center py-4">
+                <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-3" />
+                <p className="text-sm font-medium text-foreground mb-1">Processing {pickupPayMethod.toUpperCase()} Payment</p>
+                <p className="text-xs text-muted-foreground capitalize">{cryptoStep === 'idle' ? 'Initiating...' : cryptoStep.replace('ing', 'ing...')}</p>
+              </div>
             ) : (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  Your car is ready! Pay via M-Pesa to complete the transaction and release your car.
+                  Your car is ready! Choose how to pay.
                 </p>
-                <div>
-                  <Label className="text-xs mb-1 block">M-Pesa Phone Number</Label>
-                  <Input
-                    placeholder="0712345678"
-                    value={mpesaPhone}
-                    onChange={e => setMpesaPhone(e.target.value)}
-                  />
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="text-muted-foreground">Amount:</span>
+                  <span className="font-display text-foreground">
+                    KES {(confirmBooking?.servicePrice || 0).toLocaleString()}
+                    {' '}
+                    <span className="text-xs text-muted-foreground font-normal">
+                      (≈ ${(( confirmBooking?.servicePrice || 0) / conversionRate).toFixed(2)} USD)
+                    </span>
+                  </span>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Amount to pay:</span>
-                  <span className="font-display text-foreground">KES {(confirmBooking?.servicePrice || 0).toLocaleString()}</span>
+
+                {/* Payment method tabs */}
+                <div className="flex rounded-lg overflow-hidden border border-border">
+                  {([
+                    { id: 'mpesa' as const, label: 'M-Pesa', icon: Phone },
+                    { id: 'usdt' as const, label: 'USDT', icon: Wallet },
+                    { id: 'usdc' as const, label: 'USDC', icon: Wallet },
+                  ]).map(m => (
+                    <button key={m.id} onClick={() => setPickupPayMethod(m.id)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${pickupPayMethod === m.id ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:text-foreground'}`}>
+                      <m.icon className="w-3 h-3" /> {m.label}
+                    </button>
+                  ))}
                 </div>
-                <Button
-                  className="w-full"
-                  disabled={pickupPayStep === 'paying' || !mpesaPhone}
-                  onClick={() => handlePayAtPickup(confirmBooking)}
-                >
-                  {pickupPayStep === 'paying'
-                    ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending STK Push…</>
-                    : <>Pay KES {(confirmBooking?.servicePrice || 0).toLocaleString()} via M-Pesa</>
-                  }
-                </Button>
+
+                {pickupPayMethod === 'mpesa' && (
+                  <>
+                    <div>
+                      <Label className="text-xs mb-1 block">M-Pesa Phone Number</Label>
+                      <Input placeholder="0712345678" value={mpesaPhone} onChange={e => setMpesaPhone(e.target.value)} />
+                    </div>
+                    <Button className="w-full" disabled={pickupPayStep === 'paying' || !mpesaPhone}
+                      onClick={() => handlePayAtPickup(confirmBooking)}>
+                      {pickupPayStep === 'paying'
+                        ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending STK Push…</>
+                        : <>Pay KES {(confirmBooking?.servicePrice || 0).toLocaleString()} via M-Pesa</>}
+                    </Button>
+                  </>
+                )}
+
+                {(pickupPayMethod === 'usdt' || pickupPayMethod === 'usdc') && (
+                  <>
+                    {!isWalletAvailable() && (
+                      <div className="rounded-lg bg-destructive/5 border border-destructive/20 p-2 text-xs text-destructive">
+                        No crypto wallet detected. Install MetaMask or open in Trust Wallet's browser.
+                      </div>
+                    )}
+                    <Button className="w-full" disabled={pickupPayStep === 'paying'}
+                      onClick={() => handleCryptoAtPickup(confirmBooking, pickupPayMethod)}>
+                      {pickupPayStep === 'paying'
+                        ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing…</>
+                        : <>Pay ${((confirmBooking?.servicePrice || 0) / conversionRate).toFixed(2)} {pickupPayMethod.toUpperCase()} on Avalanche</>}
+                    </Button>
+                  </>
+                )}
               </div>
             )
           ) : (

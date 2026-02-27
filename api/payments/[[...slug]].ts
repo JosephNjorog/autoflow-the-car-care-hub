@@ -252,6 +252,81 @@ async function handleMpesaStkPickup(req: VercelRequest, res: VercelResponse) {
   }
 }
 
+// ── POST /api/payments/flutterwave-verify ─────────────────────────────────────
+// Called by frontend after Flutterwave inline checkout completes
+async function handleFlutterwaveVerify(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  const auth = requireAuth(req, res);
+  if (!auth) return;
+
+  const { transactionId, bookingId } = req.body;
+  if (!transactionId || !bookingId) return res.status(400).json({ error: 'transactionId and bookingId are required' });
+
+  const [booking] = await sql`SELECT b.id, b.customer_id, b.payment_status, s.price FROM bookings b JOIN services s ON s.id = b.service_id WHERE b.id = ${bookingId}`;
+  if (!booking) return res.status(404).json({ error: 'Booking not found' });
+  if (auth.role === 'customer' && booking.customer_id !== auth.userId) return res.status(403).json({ error: 'Not authorized' });
+  if (['completed', 'captured', 'released'].includes(booking.payment_status as string)) return res.status(400).json({ error: 'Already paid' });
+
+  try {
+    // Verify with Flutterwave
+    const fwRes = await fetch(`https://api.flutterwave.com/v3/transactions/${transactionId}/verify`, {
+      headers: { Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}` },
+    });
+    const fwData = await fwRes.json() as { status: string; data?: { status: string; amount: number; currency: string } };
+
+    if (fwData.status !== 'success' || fwData.data?.status !== 'successful') {
+      return res.status(400).json({ error: 'Flutterwave payment not successful' });
+    }
+
+    const amount = fwData.data!.amount;
+
+    // Mark as captured (escrow)
+    await sql`
+      UPDATE transactions SET status = 'captured', amount = ${amount}
+      WHERE booking_id = ${bookingId}
+    `;
+    await sql`
+      UPDATE bookings SET payment_status = 'captured', payment_method = 'card',
+        status = CASE WHEN status = 'pending' THEN 'confirmed' ELSE status END
+      WHERE id = ${bookingId}
+    `;
+    await sql`
+      INSERT INTO notifications (user_id, title, message, type)
+      VALUES (${booking.customer_id}, 'Payment Captured ✓',
+        ${'KES ' + amount + ' received via card. Funds held in escrow until you confirm service completion.'},
+        'payment')
+    `;
+    return res.status(200).json({ success: true, amount });
+  } catch (err) {
+    console.error('Flutterwave verify error:', err);
+    return res.status(500).json({ error: 'Failed to verify payment' });
+  }
+}
+
+// ── POST /api/payments/b2c-result ─────────────────────────────────────────────
+// Safaricom B2C result callback (owner payout result)
+async function handleB2cResult(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  try {
+    const result = req.body?.Result;
+    if (result?.ResultCode === '0') {
+      console.log('B2C payout succeeded:', result?.TransactionID);
+    } else {
+      console.error('B2C payout failed:', result?.ResultDesc);
+    }
+  } catch (err) {
+    console.error('B2C result error:', err);
+  }
+  return res.status(200).json({ ResultCode: '00000000', ResultDesc: 'Accepted' });
+}
+
+// ── POST /api/payments/b2c-timeout ────────────────────────────────────────────
+// Safaricom B2C timeout callback
+async function handleB2cTimeout(req: VercelRequest, res: VercelResponse) {
+  console.error('B2C timeout:', req.body);
+  return res.status(200).json({ ResultCode: '00000000', ResultDesc: 'Accepted' });
+}
+
 // ── Router ────────────────────────────────────────────────────────────────────
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
@@ -259,11 +334,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const slug = urlPath.replace(/^\/api\/[^/]+\/?/, '').split('/').filter(Boolean);
   const route = slug.join('/');
 
-  if (route === 'mpesa-stk')         return handleMpesaStk(req, res);
-  if (route === 'mpesa-stk-pickup')  return handleMpesaStkPickup(req, res);
-  if (route === 'mpesa-callback')    return handleMpesaCallback(req, res);
-  if (route === 'status')            return handleStatus(req, res);
-  if (route === 'transactions')      return handleTransactions(req, res);
+  if (route === 'mpesa-stk')           return handleMpesaStk(req, res);
+  if (route === 'mpesa-stk-pickup')    return handleMpesaStkPickup(req, res);
+  if (route === 'mpesa-callback')      return handleMpesaCallback(req, res);
+  if (route === 'status')              return handleStatus(req, res);
+  if (route === 'transactions')        return handleTransactions(req, res);
+  if (route === 'flutterwave-verify')  return handleFlutterwaveVerify(req, res);
+  if (route === 'b2c-result')          return handleB2cResult(req, res);
+  if (route === 'b2c-timeout')         return handleB2cTimeout(req, res);
 
   return res.status(404).json({ error: 'Not found' });
 }

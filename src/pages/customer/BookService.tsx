@@ -150,8 +150,55 @@ export default function BookService() {
           setCryptoStep('idle');
           setStep('checkout');
         }
+      } else if (paymentMethod === 'card') {
+        // Flutterwave inline card payment — load script dynamically, then open modal
+        try {
+          await new Promise<void>((resolve, reject) => {
+            if ((window as any).FlutterwaveCheckout) { resolve(); return; }
+            const script = document.createElement('script');
+            script.src = 'https://checkout.flutterwave.com/v3.js';
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Failed to load payment SDK'));
+            document.head.appendChild(script);
+          });
+          await new Promise<void>((resolve, reject) => {
+            (window as any).FlutterwaveCheckout({
+              public_key: import.meta.env.VITE_FLUTTERWAVE_PUBLIC_KEY,
+              tx_ref: `autoflow-${booking.id}-${Date.now()}`,
+              amount: selectedServiceData?.price,
+              currency: 'KES',
+              payment_options: 'card',
+              customer: { email: user?.email, name: user?.name, phone_number: user?.phone },
+              customizations: {
+                title: 'AutoFlow Payment',
+                description: `${selectedServiceData?.name} at ${selectedLocation?.name}`,
+                logo: '/logo.png',
+              },
+              callback: async (response: { transaction_id: number; status: string }) => {
+                if (response.status === 'successful') {
+                  try {
+                    await api.post('/payments/flutterwave-verify', {
+                      transactionId: response.transaction_id,
+                      bookingId: booking.id,
+                    });
+                    resolve();
+                  } catch (verifyErr) {
+                    reject(verifyErr);
+                  }
+                } else {
+                  reject(new Error('Card payment was not completed'));
+                }
+              },
+              onclose: () => reject(new Error('Payment window closed. Your booking is saved — retry payment in My Bookings.')),
+            });
+          });
+          setStep('confirmed');
+        } catch (cardErr) {
+          const cardMsg = cardErr instanceof Error ? cardErr.message : 'Card payment failed';
+          toast({ title: 'Payment Incomplete', description: cardMsg, variant: 'destructive' });
+          setStep('checkout');
+        }
       } else {
-        // Card or other — booking created, payment handled externally
         setStep('confirmed');
       }
     } catch (err) {

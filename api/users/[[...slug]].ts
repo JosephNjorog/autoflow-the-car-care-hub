@@ -182,13 +182,15 @@ async function handleById(req: VercelRequest, res: VercelResponse, id: string) {
   if (auth.role !== 'admin' && auth.userId !== id) return res.status(403).json({ error: 'Insufficient permissions' });
 
   if (req.method === 'GET') {
-    const [user] = await sql`SELECT id, email, first_name, last_name, phone, role, wallet_address, avatar_url, is_verified, approval_status, created_at FROM users WHERE id = ${id}`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS mpesa_payout_phone TEXT`.catch(() => {});
+    const [user] = await sql`SELECT id, email, first_name, last_name, phone, role, wallet_address, avatar_url, is_verified, approval_status, mpesa_payout_phone, created_at FROM users WHERE id = ${id}`;
     if (!user) return res.status(404).json({ error: 'User not found' });
-    return res.status(200).json({ id: user.id, email: user.email, name: `${user.first_name} ${user.last_name}`, firstName: user.first_name, lastName: user.last_name, phone: user.phone, role: user.role, walletAddress: user.wallet_address, avatarUrl: user.avatar_url, isVerified: user.is_verified, approvalStatus: user.approval_status, createdAt: user.created_at });
+    return res.status(200).json({ id: user.id, email: user.email, name: `${user.first_name} ${user.last_name}`, firstName: user.first_name, lastName: user.last_name, phone: user.phone, role: user.role, walletAddress: user.wallet_address, avatarUrl: user.avatar_url, isVerified: user.is_verified, approvalStatus: user.approval_status, mpesaPayoutPhone: user.mpesa_payout_phone || null, createdAt: user.created_at });
   }
 
   if (req.method === 'PUT' || req.method === 'PATCH') {
-    const { firstName, lastName, phone, walletAddress, avatarUrl, password, approvalStatus } = req.body;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS mpesa_payout_phone TEXT`.catch(() => {});
+    const { firstName, lastName, phone, walletAddress, avatarUrl, password, approvalStatus, mpesaPayoutPhone } = req.body;
     if (approvalStatus && auth.role !== 'admin') return res.status(403).json({ error: 'Insufficient permissions' });
     const passwordHash = password ? await bcrypt.hash(password, 10) : undefined;
     const [updated] = await sql`
@@ -200,12 +202,13 @@ async function handleById(req: VercelRequest, res: VercelResponse, id: string) {
         avatar_url = COALESCE(${avatarUrl || null}, avatar_url),
         password_hash = COALESCE(${passwordHash || null}, password_hash),
         approval_status = COALESCE(${approvalStatus || null}, approval_status),
-        is_verified = CASE WHEN ${approvalStatus || null} = 'approved' THEN true ELSE is_verified END
+        is_verified = CASE WHEN ${approvalStatus || null} = 'approved' THEN true ELSE is_verified END,
+        mpesa_payout_phone = COALESCE(${mpesaPayoutPhone || null}, mpesa_payout_phone)
       WHERE id = ${id}
-      RETURNING id, email, first_name, last_name, phone, role, wallet_address, avatar_url, is_verified, approval_status
+      RETURNING id, email, first_name, last_name, phone, role, wallet_address, avatar_url, is_verified, approval_status, mpesa_payout_phone
     `;
     if (!updated) return res.status(404).json({ error: 'User not found' });
-    return res.status(200).json({ id: updated.id, email: updated.email, name: `${updated.first_name} ${updated.last_name}`, firstName: updated.first_name, lastName: updated.last_name, phone: updated.phone, role: updated.role, walletAddress: updated.wallet_address, avatarUrl: updated.avatar_url, isVerified: updated.is_verified, approvalStatus: updated.approval_status });
+    return res.status(200).json({ id: updated.id, email: updated.email, name: `${updated.first_name} ${updated.last_name}`, firstName: updated.first_name, lastName: updated.last_name, phone: updated.phone, role: updated.role, walletAddress: updated.wallet_address, avatarUrl: updated.avatar_url, isVerified: updated.is_verified, approvalStatus: updated.approval_status, mpesaPayoutPhone: updated.mpesa_payout_phone || null });
   }
 
   if (req.method === 'DELETE') {

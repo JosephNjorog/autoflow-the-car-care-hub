@@ -17,20 +17,42 @@ function mapService(s: Record<string, unknown>) {
 // ── GET/POST /api/services ────────────────────────────────────────────────────
 async function handleIndex(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {
-    const { ownerId, locationId, activeOnly } = req.query;
+    const { ownerId: ownerIdParam, locationId, activeOnly } = req.query;
+    const onlyActive = activeOnly !== 'false';
     let services;
+
     if (locationId) {
+      // Customer view: services for a specific location (joined via owner_id)
+      // Only return active services and active locations
+      if (onlyActive) {
+        services = await sql`
+          SELECT s.* FROM services s
+          INNER JOIN locations l ON l.owner_id = s.owner_id
+          WHERE l.id = ${locationId as string}
+            AND l.is_active = true
+            AND s.is_active = true
+          ORDER BY s.category, s.price
+        `;
+      } else {
+        services = await sql`
+          SELECT s.* FROM services s
+          INNER JOIN locations l ON l.owner_id = s.owner_id
+          WHERE l.id = ${locationId as string}
+          ORDER BY s.category, s.price
+        `;
+      }
+    } else if (ownerIdParam) {
+      // Owner dashboard: all services for a specific owner (active + inactive)
       services = await sql`
-        SELECT s.* FROM services s
-        INNER JOIN locations l ON l.owner_id = s.owner_id
-        WHERE l.id = ${locationId as string}
-        AND (${activeOnly !== 'false'} = false OR s.is_active = true)
-        ORDER BY s.category, s.price
+        SELECT * FROM services
+        WHERE owner_id = ${ownerIdParam as string}
+        ORDER BY category, price
       `;
-    } else if (ownerId) {
-      services = await sql`SELECT * FROM services WHERE owner_id = ${ownerId as string} ORDER BY category, price`;
     } else {
-      services = await sql`SELECT * FROM services WHERE is_active = true ORDER BY category, price`;
+      // Public listing: only active services
+      services = await sql`
+        SELECT * FROM services WHERE is_active = true ORDER BY category, price
+      `;
     }
     return res.status(200).json(services.map(mapService));
   }

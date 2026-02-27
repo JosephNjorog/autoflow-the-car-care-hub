@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, Droplets, Clock, Loader2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Plus, Edit, Trash2, Droplets, Clock, Loader2, ToggleLeft, ToggleRight, BookOpen, CheckCircle } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/lib/api';
@@ -21,6 +22,15 @@ type ServiceFormData = {
   description: string;
   price: string;
   duration: string;
+  category: string;
+};
+
+type ServiceTemplate = {
+  id: string;
+  name: string;
+  description: string;
+  defaultPrice: number;
+  defaultDuration: number;
   category: string;
 };
 
@@ -119,6 +129,7 @@ export default function OwnerServices() {
   const [saving, setSaving] = useState(false);
   const [toggling, setToggling] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [addingTemplate, setAddingTemplate] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -129,7 +140,16 @@ export default function OwnerServices() {
     enabled: !!user?.id,
   });
 
+  // Fetch the global service catalog (templates)
+  const { data: templates = [], isLoading: templatesLoading } = useQuery({
+    queryKey: ['service-templates'],
+    queryFn: () => api.get<ServiceTemplate[]>('/services/templates'),
+  });
+
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['services'] });
+
+  // Set of service names the owner already has (for "already added" state in catalog)
+  const ownedNames = new Set(services.map((s: any) => s.name.toLowerCase()));
 
   // ── CRUD ──────────────────────────────────────────────────────────────────
   const handleCreate = async () => {
@@ -210,7 +230,35 @@ export default function OwnerServices() {
     }
   };
 
+  const handleAddTemplate = async (template: ServiceTemplate) => {
+    setAddingTemplate(template.id);
+    try {
+      await api.post('/services', { templateId: template.id });
+      invalidate();
+      toast({
+        title: 'Added to Your Services',
+        description: `"${template.name}" has been added. You can now adjust the price and activate it.`,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed';
+      if (msg.toLowerCase().includes('already')) {
+        toast({ title: 'Already Added', description: msg });
+      } else {
+        toast({ title: 'Error', description: msg, variant: 'destructive' });
+      }
+    } finally {
+      setAddingTemplate(null);
+    }
+  };
+
   const activeCount = services.filter((s: any) => s.isActive).length;
+
+  // Group templates by category for the catalog view
+  const templatesByCategory = templates.reduce<Record<string, ServiceTemplate[]>>((acc, t) => {
+    if (!acc[t.category]) acc[t.category] = [];
+    acc[t.category].push(t);
+    return acc;
+  }, {});
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -243,110 +291,192 @@ export default function OwnerServices() {
         }
       />
 
-      {isLoading ? (
-        <div className="text-center py-12 text-muted-foreground flex items-center justify-center gap-2">
-          <Loader2 className="w-4 h-4 animate-spin" /> Loading services…
-        </div>
-      ) : services.length === 0 ? (
-        <div className="text-center py-16">
-          <Droplets className="w-12 h-12 text-muted-foreground/40 mx-auto mb-4" />
-          <p className="text-muted-foreground font-medium">No services yet</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            Add your first service so customers can book it at your locations.
-          </p>
-        </div>
-      ) : (
-        <>
-          {activeCount === 0 && services.length > 0 && (
-            <div className="mb-4 px-4 py-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-700 dark:text-amber-400">
-              ⚠️ You have {services.length} service{services.length !== 1 ? 's' : ''} but none are active — customers won't see any services at your locations until you enable at least one.
+      <Tabs defaultValue="my-services">
+        <TabsList className="mb-6">
+          <TabsTrigger value="my-services">My Services</TabsTrigger>
+          <TabsTrigger value="catalog" className="flex items-center gap-1.5">
+            <BookOpen className="w-3.5 h-3.5" /> Service Catalog
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ── My Services Tab ─────────────────────────────────────────────── */}
+        <TabsContent value="my-services">
+          {isLoading ? (
+            <div className="text-center py-12 text-muted-foreground flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Loading services…
+            </div>
+          ) : services.length === 0 ? (
+            <div className="text-center py-16">
+              <Droplets className="w-12 h-12 text-muted-foreground/40 mx-auto mb-4" />
+              <p className="text-muted-foreground font-medium">No services yet</p>
+              <p className="text-sm text-muted-foreground mt-1 mb-4">
+                Add your first service manually or browse the Service Catalog to get started quickly.
+              </p>
+            </div>
+          ) : (
+            <>
+              {activeCount === 0 && services.length > 0 && (
+                <div className="mb-4 px-4 py-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-700 dark:text-amber-400">
+                  ⚠️ You have {services.length} service{services.length !== 1 ? 's' : ''} but none are active — customers won't see any services at your locations until you enable at least one.
+                </div>
+              )}
+
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {services.map((s: any) => (
+                  <div
+                    key={s.id}
+                    className={`p-5 rounded-xl border shadow-card transition-opacity ${
+                      s.isActive ? 'bg-card border-border' : 'bg-muted/30 border-border/50 opacity-70'
+                    }`}
+                  >
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className={`p-2 rounded-lg ${s.isActive ? 'bg-primary/10' : 'bg-muted'}`}>
+                          <Droplets className={`w-4 h-4 ${s.isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                        </div>
+                        <Badge variant={s.isActive ? 'secondary' : 'outline'} className="text-[10px] px-1.5 py-0">
+                          {s.category}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {toggling === s.id
+                          ? <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                          : s.isActive
+                            ? <ToggleRight className="w-4 h-4 text-primary" />
+                            : <ToggleLeft className="w-4 h-4 text-muted-foreground" />
+                        }
+                        <Switch
+                          checked={s.isActive}
+                          disabled={toggling === s.id}
+                          onCheckedChange={() => handleToggle(s)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Name & description */}
+                    <p className="font-display text-lg text-foreground mb-1">{s.name}</p>
+                    <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{s.description || 'No description'}</p>
+
+                    {/* Price & duration */}
+                    <div className="flex items-center justify-between">
+                      <span className="font-display text-lg text-foreground">
+                        KES {parseFloat(s.price || 0).toLocaleString()}
+                      </span>
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Clock className="w-3 h-3" /> {s.duration} min
+                      </span>
+                    </div>
+
+                    {/* Status pill */}
+                    <div className={`mt-2 text-xs font-medium ${s.isActive ? 'text-success' : 'text-muted-foreground'}`}>
+                      {s.isActive ? '● Visible to customers' : '○ Hidden from customers'}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 mt-4">
+                      <Button
+                        variant="outline" size="sm" className="flex-1"
+                        onClick={() => {
+                          setEditingService(s);
+                          setEditForm({
+                            name: s.name ?? '',
+                            description: s.description ?? '',
+                            price: String(s.price ?? ''),
+                            duration: String(s.duration ?? ''),
+                            category: s.category ?? 'Basic',
+                          });
+                          setEditOpen(true);
+                        }}
+                      >
+                        <Edit className="w-3 h-3 mr-1" /> Edit
+                      </Button>
+                      <Button
+                        variant="outline" size="sm"
+                        className="text-destructive border-destructive/20 hover:bg-destructive/10"
+                        disabled={deleting === s.id}
+                        onClick={() => handleDelete(s)}
+                      >
+                        {deleting === s.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </TabsContent>
+
+        {/* ── Service Catalog Tab ─────────────────────────────────────────── */}
+        <TabsContent value="catalog">
+          <div className="mb-5 p-4 rounded-lg bg-primary/5 border border-primary/10 text-sm text-muted-foreground">
+            <p className="font-medium text-foreground mb-0.5">Browse the Service Catalog</p>
+            Browse standard car wash services below. Click <strong>Add to My Services</strong> to copy one to your account — then adjust the price, duration, and activate it when you're ready.
+          </div>
+
+          {templatesLoading ? (
+            <div className="text-center py-12 text-muted-foreground flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Loading catalog…
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {Object.entries(templatesByCategory).map(([category, items]) => (
+                <div key={category}>
+                  <h3 className="font-display text-base text-foreground mb-3 flex items-center gap-2">
+                    <Droplets className="w-4 h-4 text-primary" />
+                    {category}
+                  </h3>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {items.map(t => {
+                      const alreadyAdded = ownedNames.has(t.name.toLowerCase());
+                      return (
+                        <div
+                          key={t.id}
+                          className="p-5 rounded-xl border border-border bg-card shadow-card flex flex-col"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">{t.category}</Badge>
+                          </div>
+                          <p className="font-display text-base text-foreground mb-1">{t.name}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-2 flex-1 mb-3">
+                            {t.description || 'No description'}
+                          </p>
+                          <div className="flex items-center justify-between mb-4">
+                            <span className="font-display text-foreground">
+                              KES {t.defaultPrice.toLocaleString()}
+                            </span>
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Clock className="w-3 h-3" /> {t.defaultDuration} min
+                            </span>
+                          </div>
+                          {alreadyAdded ? (
+                            <Button variant="outline" size="sm" className="w-full text-success border-success/30" disabled>
+                              <CheckCircle className="w-3.5 h-3.5 mr-1.5" /> Added
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full"
+                              disabled={addingTemplate === t.id}
+                              onClick={() => handleAddTemplate(t)}
+                            >
+                              {addingTemplate === t.id
+                                ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Adding…</>
+                                : <><Plus className="w-3.5 h-3.5 mr-1.5" /> Add to My Services</>
+                              }
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {services.map((s: any) => (
-              <div
-                key={s.id}
-                className={`p-5 rounded-xl border shadow-card transition-opacity ${
-                  s.isActive ? 'bg-card border-border' : 'bg-muted/30 border-border/50 opacity-70'
-                }`}
-              >
-                {/* Header */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className={`p-2 rounded-lg ${s.isActive ? 'bg-primary/10' : 'bg-muted'}`}>
-                      <Droplets className={`w-4 h-4 ${s.isActive ? 'text-primary' : 'text-muted-foreground'}`} />
-                    </div>
-                    <Badge variant={s.isActive ? 'secondary' : 'outline'} className="text-[10px] px-1.5 py-0">
-                      {s.category}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    {toggling === s.id
-                      ? <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                      : s.isActive
-                        ? <ToggleRight className="w-4 h-4 text-primary" />
-                        : <ToggleLeft className="w-4 h-4 text-muted-foreground" />
-                    }
-                    <Switch
-                      checked={s.isActive}
-                      disabled={toggling === s.id}
-                      onCheckedChange={() => handleToggle(s)}
-                    />
-                  </div>
-                </div>
-
-                {/* Name & description */}
-                <p className="font-display text-lg text-foreground mb-1">{s.name}</p>
-                <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{s.description || 'No description'}</p>
-
-                {/* Price & duration */}
-                <div className="flex items-center justify-between">
-                  <span className="font-display text-lg text-foreground">
-                    KES {parseFloat(s.price || 0).toLocaleString()}
-                  </span>
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock className="w-3 h-3" /> {s.duration} min
-                  </span>
-                </div>
-
-                {/* Status pill */}
-                <div className={`mt-2 text-xs font-medium ${s.isActive ? 'text-success' : 'text-muted-foreground'}`}>
-                  {s.isActive ? '● Visible to customers' : '○ Hidden from customers'}
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2 mt-4">
-                  <Button
-                    variant="outline" size="sm" className="flex-1"
-                    onClick={() => {
-                      setEditingService(s);
-                      setEditForm({
-                        name: s.name ?? '',
-                        description: s.description ?? '',
-                        price: String(s.price ?? ''),
-                        duration: String(s.duration ?? ''),
-                        category: s.category ?? 'Basic',
-                      });
-                      setEditOpen(true);
-                    }}
-                  >
-                    <Edit className="w-3 h-3 mr-1" /> Edit
-                  </Button>
-                  <Button
-                    variant="outline" size="sm"
-                    className="text-destructive border-destructive/20 hover:bg-destructive/10"
-                    disabled={deleting === s.id}
-                    onClick={() => handleDelete(s)}
-                  >
-                    {deleting === s.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+        </TabsContent>
+      </Tabs>
 
       {/* Edit dialog — single instance outside the map */}
       <Dialog open={editOpen} onOpenChange={o => { setEditOpen(o); if (!o) setEditingService(null); }}>

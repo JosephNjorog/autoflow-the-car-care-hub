@@ -136,9 +136,28 @@ async function handleIndex(req: VercelRequest, res: VercelResponse) {
     const auth = requireAuth(req, res);
     if (!auth) return;
     if (!['owner', 'admin'].includes(auth.role)) return res.status(403).json({ error: 'Only owners can create services' });
+    const ownerId = auth.role === 'admin' ? (req.body.ownerId || auth.userId) : auth.userId;
+
+    // Clone from a template
+    const { templateId } = req.body;
+    if (templateId) {
+      const [template] = await sql`SELECT * FROM service_templates WHERE id = ${templateId}`;
+      if (!template) return res.status(404).json({ error: 'Template not found' });
+      // Check if the owner already has a service with this name (avoid duplicates)
+      const [existing] = await sql`
+        SELECT id FROM services WHERE owner_id = ${ownerId} AND LOWER(name) = LOWER(${template.name as string})
+      `;
+      if (existing) return res.status(409).json({ error: 'You already have a service with this name.' });
+      const [service] = await sql`
+        INSERT INTO services (owner_id, name, description, price, duration, category, is_active)
+        VALUES (${ownerId}, ${template.name}, ${template.description}, ${template.default_price}, ${template.default_duration}, ${template.category}, false)
+        RETURNING *
+      `;
+      return res.status(201).json(mapService(service));
+    }
+
     const { name, description, price, duration, category, imageUrl } = req.body;
     if (!name || !price || !duration) return res.status(400).json({ error: 'Name, price, and duration are required' });
-    const ownerId = auth.role === 'admin' ? (req.body.ownerId || auth.userId) : auth.userId;
     const [service] = await sql`
       INSERT INTO services (owner_id, name, description, price, duration, category, image_url)
       VALUES (${ownerId}, ${name}, ${description || null}, ${price}, ${duration}, ${category || 'Basic'}, ${imageUrl || null})
@@ -194,7 +213,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const urlPath = (req.url ?? '').split('?')[0];
   const slug = urlPath.replace(/^\/api\/[^/]+\/?/, '').split('/').filter(Boolean);
   const route = slug.join('/');
-  if (slug.length === 0 || route === "index") return handleIndex(req, res);
+  if (slug.length === 0 || route === 'index') return handleIndex(req, res);
+  if (route === 'templates') return handleTemplates(req, res);
   if (slug.length === 1) return handleById(req, res, slug[0]);
   return res.status(404).json({ error: 'Not found' });
 }

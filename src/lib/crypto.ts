@@ -202,28 +202,33 @@ export interface CryptoPaymentCallbacks {
 // ─── Full Payment Flow ────────────────────────────────────────────────────────
 
 /**
- * Run the full crypto payment flow.
+ * Run the full crypto payment flow with 10/90 split.
  *
- * @param token      - 'usdt' or 'usdc'
- * @param usdAmount  - amount in USD
- * @param callbacks  - step callbacks for UX feedback
- * @param walletType - 'injected' (MetaMask etc.) or 'wdk' (Tether WDK in-app wallet)
+ * @param token            - 'usdt' or 'usdc'
+ * @param usdAmount        - total amount in USD
+ * @param callbacks        - step callbacks for UX feedback
+ * @param walletType       - 'injected' (MetaMask etc.) or 'wdk'
+ * @param ownerWallet      - car wash owner's Avalanche wallet (receives 90%)
+ *                           AutoFlow wallet receives 10% always.
+ *                           If omitted/empty, 100% goes to AutoFlow.
  */
 export async function runCryptoPayment(
   token: 'usdt' | 'usdc',
   usdAmount: number,
   callbacks: CryptoPaymentCallbacks,
-  walletType: PaymentWalletType = 'injected'
+  walletType: PaymentWalletType = 'injected',
+  ownerWallet?: string,
 ): Promise<string> {
-  const recipientWallet = import.meta.env.VITE_AUTOFLOW_WALLET as string;
+  const autoflowWallet = import.meta.env.VITE_AUTOFLOW_WALLET as string;
 
   if (walletType === 'wdk') {
-    return sendViaWDK(token, usdAmount, recipientWallet, {
+    // WDK path: send full amount to AutoFlow; backend handles split reconciliation
+    return sendViaWDK(token, usdAmount, autoflowWallet, {
       onStep: (step: WDKPaymentStep) => callbacks.onStep(step as CryptoPaymentStep),
     });
   }
 
-  // Injected wallet flow
+  // Injected wallet flow with on-chain split
   callbacks.onStep('connecting');
   await connectInjectedWallet();
 
@@ -231,7 +236,8 @@ export async function runCryptoPayment(
   await switchToAvalanche();
 
   callbacks.onStep('signing');
-  const txHash = await sendCryptoPaymentInjected(token, usdAmount, recipientWallet);
+  const effectiveOwnerWallet = ownerWallet || autoflowWallet;
+  const txHash = await sendSplitPaymentInjected(token, usdAmount, autoflowWallet, effectiveOwnerWallet);
 
   callbacks.onStep('confirming');
   await new Promise(r => setTimeout(r, 800));

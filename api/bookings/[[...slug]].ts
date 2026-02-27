@@ -12,6 +12,7 @@ function mapBooking(b: Record<string, unknown>) {
     servicePrice: parseFloat(b.service_price as string),
     locationId: b.location_id, locationName: b.location_name,
     detailerId: b.detailer_id, detailerName: b.detailer_name,
+    staffId: b.staff_id, staffName: b.staff_name,
     date: b.scheduled_date, time: b.scheduled_time,
     status: b.status, paymentStatus: b.payment_status, paymentMethod: b.payment_method,
     beforePhotos: b.before_photos || [], afterPhotos: b.after_photos || [],
@@ -30,13 +31,15 @@ const BOOKING_QUERY = `
     s.name as service_name,
     s.price as service_price,
     l.name as location_name,
-    d.first_name || ' ' || d.last_name as detailer_name
+    d.first_name || ' ' || d.last_name as detailer_name,
+    os.name as staff_name
   FROM bookings b
   JOIN users c ON c.id = b.customer_id
   LEFT JOIN vehicles v ON v.id = b.vehicle_id
   JOIN services s ON s.id = b.service_id
   JOIN locations l ON l.id = b.location_id
   LEFT JOIN users d ON d.id = b.detailer_id
+  LEFT JOIN owner_staff os ON os.id = b.staff_id
 `;
 
 function buildFilteredQuery(baseWhere: string, status: unknown, date: unknown, hasDateFilter: boolean) {
@@ -155,7 +158,7 @@ async function handleById(req: VercelRequest, res: VercelResponse, id: string) {
     const [booking] = await sql`SELECT * FROM bookings WHERE id = ${id}`;
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
 
-    const { status, detailerId, rating, review, beforePhotos, afterPhotos } = req.body;
+    const { status, detailerId, staffId, rating, review, beforePhotos, afterPhotos } = req.body;
 
     if (status) {
       const allowed: Record<string, string[]> = {

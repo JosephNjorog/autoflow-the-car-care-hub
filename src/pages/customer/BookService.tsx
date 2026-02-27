@@ -131,7 +131,9 @@ export default function BookService() {
           await runCryptoPayment(
             paymentMethod as 'usdt' | 'usdc',
             parseFloat(usdAmount),
-            { onStep: setCryptoStep }
+            { onStep: setCryptoStep },
+            'injected',
+            selectedLocation?.ownerWalletAddress ?? undefined,
           );
           setStep('confirmed');
         } catch (cryptoErr) {

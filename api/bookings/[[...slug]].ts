@@ -180,6 +180,10 @@ async function handleById(req: VercelRequest, res: VercelResponse, id: string) {
         `;
         await sql`UPDATE bookings SET payment_status = 'completed' WHERE id = ${id}`;
         await sql`UPDATE transactions SET status = 'completed' WHERE booking_id = ${id}`;
+        // Increment wash count for assigned offline staff
+        if (booking.staff_id) {
+          await sql`UPDATE owner_staff SET total_washes = total_washes + 1 WHERE id = ${booking.staff_id}`;
+        }
         const [cust] = await sql`
           SELECT c.first_name, c.last_name, c.email, c.id, s.name as service_name, l.name as location_name, b.scheduled_date::text as date
           FROM bookings b JOIN users c ON c.id = b.customer_id JOIN services s ON s.id = b.service_id JOIN locations l ON l.id = b.location_id WHERE b.id = ${id}

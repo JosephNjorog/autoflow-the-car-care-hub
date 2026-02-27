@@ -18,6 +18,7 @@ const statusColors: Record<string, string> = {
   pending: 'bg-warning/20 border-warning/40 text-warning',
   confirmed: 'bg-primary/20 border-primary/40 text-primary',
   in_progress: 'bg-accent/20 border-accent/40 text-accent',
+  awaiting_confirmation: 'bg-success/20 border-success/40 text-success',
   completed: 'bg-success/20 border-success/40 text-success',
   cancelled: 'bg-destructive/20 border-destructive/40 text-destructive',
 };
@@ -186,6 +187,20 @@ export default function OwnerBookings() {
     }
   };
 
+  // Mark service ready for customer pickup
+  const handleMarkReady = async (bookingId: string, serviceName: string) => {
+    setActioning(bookingId);
+    try {
+      await api.patch(`/bookings/${bookingId}`, { status: 'awaiting_confirmation' });
+      invalidate();
+      toast({ title: 'Marked Ready', description: `${serviceName} — customer notified to confirm pickup.` });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed', variant: 'destructive' });
+    } finally {
+      setActioning(null);
+    }
+  };
+
   // Decline booking
   const handleDecline = async (bookingId: string, serviceName: string) => {
     setActioning(bookingId);
@@ -232,10 +247,10 @@ export default function OwnerBookings() {
       {/* Filter + view toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex gap-2 flex-wrap">
-          {['all', 'pending', 'confirmed', 'in_progress', 'completed', 'cancelled'].map(f => (
+          {['all', 'pending', 'confirmed', 'in_progress', 'awaiting_confirmation', 'completed', 'cancelled'].map(f => (
             <Button key={f} variant={filter === f ? 'default' : 'outline'} size="sm" onClick={() => setFilter(f)}
               className="capitalize text-xs relative">
-              {f === 'all' ? 'All' : f.replace('_', ' ')}
+              {f === 'all' ? 'All' : f === 'awaiting_confirmation' ? 'Ready' : f.replace(/_/g, ' ')}
               {f === 'pending' && pendingCount > 0 && (
                 <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-warning text-warning-foreground text-[10px] font-bold">
                   {pendingCount}
@@ -264,11 +279,13 @@ export default function OwnerBookings() {
         <div className="space-y-3">
           {filtered.map((b: any) => {
             const isPending = b.status === 'pending';
+            const isInProgress = b.status === 'in_progress';
+            const isAwaitingConfirmation = b.status === 'awaiting_confirmation';
             const isActioning = actioning === b.id;
             const assignedName = b.staffName || b.detailerName;
 
             return (
-              <div key={b.id} className={`p-4 rounded-xl border shadow-card ${isPending ? 'bg-warning/5 border-warning/30' : 'bg-card border-border'}`}>
+              <div key={b.id} className={`p-4 rounded-xl border shadow-card ${isPending ? 'bg-warning/5 border-warning/30' : isAwaitingConfirmation ? 'bg-success/5 border-success/30' : 'bg-card border-border'}`}>
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -309,7 +326,6 @@ export default function OwnerBookings() {
                           disabled={isActioning}
                           onClick={() => {
                             if (allAssignable.length > 0) {
-                              // Open assign dialog; accept happens on confirm
                               setAssignDialogBooking({ ...b, acceptOnAssign: true });
                               setSelectedStaff('');
                             } else {
@@ -321,9 +337,22 @@ export default function OwnerBookings() {
                           Accept
                         </Button>
                       </div>
+                    ) : isInProgress ? (
+                      /* ── In Progress: Mark service as ready for customer pickup ── */
+                      <Button size="sm" className="gap-1 bg-success hover:bg-success/90"
+                        disabled={isActioning}
+                        onClick={() => handleMarkReady(b.id, b.serviceName)}>
+                        {isActioning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
+                        Mark Ready
+                      </Button>
+                    ) : isAwaitingConfirmation ? (
+                      /* ── Awaiting confirmation: show status, customer must confirm ── */
+                      <span className="text-xs text-success font-medium flex items-center gap-1">
+                        <Bell className="w-3 h-3" /> Waiting for customer
+                      </span>
                     ) : (
                       /* ── Confirmed: optional staff assignment ── */
-                      !['cancelled', 'completed'].includes(b.status) && !assignedName && (
+                      !['cancelled', 'completed', 'awaiting_confirmation'].includes(b.status) && !assignedName && (
                         <Button size="sm" variant="outline" className="gap-1"
                           onClick={() => { setAssignDialogBooking(b); setSelectedStaff(''); }}>
                           <UserCog className="w-3.5 h-3.5" /> Assign Staff

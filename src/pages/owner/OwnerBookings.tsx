@@ -308,7 +308,7 @@ export default function OwnerBookings() {
                           size="sm" className="gap-1"
                           disabled={isActioning}
                           onClick={() => {
-                            if (ownerStaff.length > 0) {
+                            if (allAssignable.length > 0) {
                               // Open assign dialog; accept happens on confirm
                               setAssignDialogBooking({ ...b, acceptOnAssign: true });
                               setSelectedStaff('');
@@ -355,9 +355,9 @@ export default function OwnerBookings() {
               : 'Choose a team member to handle this booking.'}
           </p>
 
-          {ownerStaff.length === 0 ? (
+          {allAssignable.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4 text-center">
-              No staff added yet. Add team members from the Staff page.
+              No staff yet. Add team members from the Staff page.
             </p>
           ) : (
             <Select value={selectedStaff} onValueChange={setSelectedStaff}>
@@ -365,11 +365,22 @@ export default function OwnerBookings() {
                 <SelectValue placeholder="Select team member" />
               </SelectTrigger>
               <SelectContent>
-                {ownerStaff.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}{s.phone ? ` · ${s.phone}` : ''}
-                  </SelectItem>
-                ))}
+                {ownerStaff.length > 0 && (
+                  <>
+                    <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Team Members</div>
+                    {ownerStaff.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}{s.phone ? ` · ${s.phone}` : ''}</SelectItem>
+                    ))}
+                  </>
+                )}
+                {onlineDetailers.length > 0 && (
+                  <>
+                    <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mt-1">App Detailers</div>
+                    {onlineDetailers.map((d: any) => (
+                      <SelectItem key={d.id} value={d.id}>{d.name || `${d.firstName} ${d.lastName}`}</SelectItem>
+                    ))}
+                  </>
+                )}
               </SelectContent>
             </Select>
           )}

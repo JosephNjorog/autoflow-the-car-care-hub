@@ -155,6 +155,9 @@ async function handleById(req: VercelRequest, res: VercelResponse, id: string) {
   }
 
   if (req.method === 'PATCH') {
+    // Ensure staff_id column exists (lazy migration)
+    await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS staff_id UUID`.catch(() => {});
+
     const [booking] = await sql`SELECT * FROM bookings WHERE id = ${id}`;
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
 
@@ -226,6 +229,21 @@ async function handleById(req: VercelRequest, res: VercelResponse, id: string) {
       if (!['owner', 'admin'].includes(auth.role)) return res.status(403).json({ error: 'Only owners can assign detailers' });
       await sql`UPDATE bookings SET detailer_id = ${detailerId || null}, status = 'confirmed' WHERE id = ${id}`;
       if (detailerId) await sql`INSERT INTO notifications (user_id, title, message, type) VALUES (${detailerId}, 'New Job Assigned', 'You have been assigned a new job. Check your schedule.', 'booking')`;
+    }
+
+    // Assign to an offline staff member (owner_staff table, no app account)
+    if (staffId !== undefined) {
+      if (!['owner', 'admin'].includes(auth.role)) return res.status(403).json({ error: 'Only owners can assign staff' });
+      // Lazy-create owner_staff table in case it hasn't been created yet
+      await sql`
+        CREATE TABLE IF NOT EXISTS owner_staff (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          owner_id UUID NOT NULL, name TEXT NOT NULL, phone TEXT, notes TEXT,
+          total_washes INTEGER DEFAULT 0, is_active BOOLEAN DEFAULT true,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+      `;
+      await sql`UPDATE bookings SET staff_id = ${staffId || null}, status = 'confirmed' WHERE id = ${id}`;
     }
 
     if (rating !== undefined) {

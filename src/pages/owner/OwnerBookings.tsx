@@ -4,10 +4,15 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { PageHeader, StatusBadge } from '@/components/shared/SharedComponents';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { List, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
+import { List, CalendarDays, ChevronLeft, ChevronRight, CheckCircle, XCircle, UserCog, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type StaffMember = { id: string; name: string; phone?: string };
 
 const statusColors: Record<string, string> = {
   pending: 'bg-warning/20 border-warning/40 text-warning',
@@ -19,6 +24,8 @@ const statusColors: Record<string, string> = {
 
 const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const dayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+// ─── CalendarView ─────────────────────────────────────────────────────────────
 
 function CalendarView({ bookings }: { bookings: any[] }) {
   const now = new Date();
@@ -103,11 +110,14 @@ function CalendarView({ bookings }: { bookings: any[] }) {
   );
 }
 
+// ─── Main Component ───────────────────────────────────────────────────────────
+
 export default function OwnerBookings() {
   const [filter, setFilter] = useState('all');
   const [view, setView] = useState<'list' | 'calendar'>('list');
-  const [assigningId, setAssigningId] = useState<string | null>(null);
-  const [selectedDetailer, setSelectedDetailer] = useState('');
+  const [assignDialogBooking, setAssignDialogBooking] = useState<any>(null);
+  const [selectedStaff, setSelectedStaff] = useState('');
+  const [actioning, setActioning] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -116,39 +126,103 @@ export default function OwnerBookings() {
     queryFn: () => api.get<any[]>('/bookings'),
   });
 
-  const { data: detailers = [] } = useQuery({
-    queryKey: ['detailers'],
-    queryFn: () => api.get<any[]>('/users?role=detailer'),
+  // Offline staff (no app account)
+  const { data: ownerStaff = [] } = useQuery({
+    queryKey: ['owner-staff'],
+    queryFn: () => api.get<StaffMember[]>('/users/staff'),
   });
 
   const filtered = bookings
     .filter((b: any) => filter === 'all' || b.status === filter)
-    .sort((a: any, b: any) => (b.date || '').localeCompare(a.date || ''));
+    .sort((a: any, b: any) => {
+      // Pending first, then by date descending
+      if (a.status === 'pending' && b.status !== 'pending') return -1;
+      if (b.status === 'pending' && a.status !== 'pending') return 1;
+      return (b.date || '').localeCompare(a.date || '');
+    });
 
-  const handleAssign = async (bookingId: string, serviceName: string) => {
-    if (!selectedDetailer) return;
-    setAssigningId(bookingId);
+  const pendingCount = bookings.filter((b: any) => b.status === 'pending').length;
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['bookings'] });
+
+  // Accept booking (optionally assign staff at same time)
+  const handleAccept = async (bookingId: string, serviceName: string, staffIdValue?: string) => {
+    setActioning(bookingId);
     try {
-      await api.patch(`/bookings/${bookingId}`, { detailerId: selectedDetailer, status: 'confirmed' });
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
-      setSelectedDetailer('');
-      toast({ title: 'Detailer Assigned', description: `Detailer assigned to ${serviceName}.` });
+      const body: Record<string, unknown> = { status: 'confirmed' };
+      if (staffIdValue) body.staffId = staffIdValue;
+      await api.patch(`/bookings/${bookingId}`, body);
+      invalidate();
+      if (staffIdValue) {
+        const staffName = ownerStaff.find(s => s.id === staffIdValue)?.name ?? 'Staff';
+        toast({ title: 'Booking Accepted & Assigned', description: `${serviceName} confirmed and assigned to ${staffName}.` });
+      } else {
+        toast({ title: 'Booking Accepted', description: `${serviceName} has been confirmed.` });
+      }
+      setAssignDialogBooking(null);
+      setSelectedStaff('');
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to assign';
-      toast({ title: 'Error', description: msg, variant: 'destructive' });
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed', variant: 'destructive' });
     } finally {
-      setAssigningId(null);
+      setActioning(null);
+    }
+  };
+
+  // Decline booking
+  const handleDecline = async (bookingId: string, serviceName: string) => {
+    setActioning(bookingId);
+    try {
+      await api.patch(`/bookings/${bookingId}`, { status: 'cancelled' });
+      invalidate();
+      toast({ title: 'Booking Declined', description: `${serviceName} has been cancelled.`, variant: 'destructive' });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed', variant: 'destructive' });
+    } finally {
+      setActioning(null);
+    }
+  };
+
+  // Assign staff to an already-accepted booking
+  const handleAssignStaff = async () => {
+    if (!assignDialogBooking || !selectedStaff) return;
+    setActioning(assignDialogBooking.id);
+    try {
+      await api.patch(`/bookings/${assignDialogBooking.id}`, { staffId: selectedStaff });
+      invalidate();
+      const staffName = ownerStaff.find(s => s.id === selectedStaff)?.name ?? 'Staff';
+      toast({ title: 'Staff Assigned', description: `${assignDialogBooking.serviceName} assigned to ${staffName}.` });
+      setAssignDialogBooking(null);
+      setSelectedStaff('');
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed', variant: 'destructive' });
+    } finally {
+      setActioning(null);
     }
   };
 
   return (
     <DashboardLayout>
-      <PageHeader title="All Bookings" subtitle="Manage bookings across all locations" />
+      <PageHeader
+        title="All Bookings"
+        subtitle={
+          pendingCount > 0
+            ? `${pendingCount} booking${pendingCount !== 1 ? 's' : ''} awaiting your response`
+            : 'Manage bookings across all locations'
+        }
+      />
+
+      {/* Filter + view toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex gap-2 flex-wrap">
-          {['all', 'pending', 'confirmed', 'in_progress', 'completed'].map(f => (
-            <Button key={f} variant={filter === f ? 'default' : 'outline'} size="sm" onClick={() => setFilter(f)} className="capitalize text-xs">
+          {['all', 'pending', 'confirmed', 'in_progress', 'completed', 'cancelled'].map(f => (
+            <Button key={f} variant={filter === f ? 'default' : 'outline'} size="sm" onClick={() => setFilter(f)}
+              className="capitalize text-xs relative">
               {f === 'all' ? 'All' : f.replace('_', ' ')}
+              {f === 'pending' && pendingCount > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-warning text-warning-foreground text-[10px] font-bold">
+                  {pendingCount}
+                </span>
+              )}
             </Button>
           ))}
         </div>
@@ -170,44 +244,145 @@ export default function OwnerBookings() {
         <div className="text-center py-12 text-muted-foreground">No bookings found.</div>
       ) : (
         <div className="space-y-3">
-          {filtered.map((b: any) => (
-            <div key={b.id} className="p-4 rounded-xl bg-card border border-border shadow-card">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div className="flex-1">
-                  <p className="font-display text-foreground">{b.serviceName} — {b.customerName}</p>
-                  <p className="text-sm text-muted-foreground">{b.vehicleName} · {b.locationName}</p>
-                  <p className="text-sm text-muted-foreground">{b.date} at {b.time}</p>
-                </div>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <StatusBadge status={b.status} />
-                  <span className="font-display text-foreground">KES {(b.servicePrice || 0).toLocaleString()}</span>
-                  {!b.detailerId && !['cancelled','completed'].includes(b.status) && (
-                    <Dialog>
-                      <DialogTrigger asChild><Button size="sm" variant="outline">Assign</Button></DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader><DialogTitle className="font-display">Assign Detailer</DialogTitle></DialogHeader>
-                        <div className="space-y-3 pt-2">
-                          <Select value={selectedDetailer} onValueChange={setSelectedDetailer}>
-                            <SelectTrigger><SelectValue placeholder="Select detailer" /></SelectTrigger>
-                            <SelectContent>
-                              {detailers.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name || `${d.firstName} ${d.lastName}`}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                          <Button className="w-full" disabled={!selectedDetailer || assigningId === b.id}
-                            onClick={() => handleAssign(b.id, b.serviceName)}>
-                            {assigningId === b.id ? 'Assigning...' : 'Assign Detailer'}
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  )}
-                  {b.detailerName && <span className="text-xs text-muted-foreground">Detailer: {b.detailerName}</span>}
+          {filtered.map((b: any) => {
+            const isPending = b.status === 'pending';
+            const isActioning = actioning === b.id;
+            const assignedName = b.staffName || b.detailerName;
+
+            return (
+              <div key={b.id} className={`p-4 rounded-xl border shadow-card ${isPending ? 'bg-warning/5 border-warning/30' : 'bg-card border-border'}`}>
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <p className="font-display text-foreground">{b.serviceName}</p>
+                      <StatusBadge status={b.status} />
+                      {isPending && (
+                        <Badge variant="outline" className="text-[10px] border-warning/50 text-warning px-1.5 py-0">
+                          Action required
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">{b.customerName} · {b.vehicleName || 'No vehicle'}</p>
+                    <p className="text-sm text-muted-foreground">{b.locationName} · {b.date} at {b.time}</p>
+                    {assignedName && (
+                      <p className="text-xs text-primary mt-1 flex items-center gap-1">
+                        <UserCog className="w-3 h-3" /> Assigned to {assignedName}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <span className="font-display text-foreground">KES {(b.servicePrice || 0).toLocaleString()}</span>
+
+                    {isPending ? (
+                      /* ── Pending: Accept (optionally assign) or Decline ── */
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm" variant="outline"
+                          className="text-destructive border-destructive/20 hover:bg-destructive/10 gap-1"
+                          disabled={isActioning}
+                          onClick={() => handleDecline(b.id, b.serviceName)}
+                        >
+                          {isActioning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+                          Decline
+                        </Button>
+                        <Button
+                          size="sm" className="gap-1"
+                          disabled={isActioning}
+                          onClick={() => {
+                            if (ownerStaff.length > 0) {
+                              // Open assign dialog; accept happens on confirm
+                              setAssignDialogBooking({ ...b, acceptOnAssign: true });
+                              setSelectedStaff('');
+                            } else {
+                              handleAccept(b.id, b.serviceName);
+                            }
+                          }}
+                        >
+                          {isActioning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                          Accept
+                        </Button>
+                      </div>
+                    ) : (
+                      /* ── Confirmed: optional staff assignment ── */
+                      !['cancelled', 'completed'].includes(b.status) && !assignedName && (
+                        <Button size="sm" variant="outline" className="gap-1"
+                          onClick={() => { setAssignDialogBooking(b); setSelectedStaff(''); }}>
+                          <UserCog className="w-3.5 h-3.5" /> Assign Staff
+                        </Button>
+                      )
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
+
+      {/* Assign Staff Dialog */}
+      <Dialog
+        open={!!assignDialogBooking}
+        onOpenChange={o => { if (!o) { setAssignDialogBooking(null); setSelectedStaff(''); } }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display">
+              {assignDialogBooking?.acceptOnAssign ? 'Accept & Assign' : 'Assign Staff'}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {assignDialogBooking?.acceptOnAssign
+              ? 'Optionally assign a team member before accepting. You can also accept without assigning.'
+              : 'Choose a team member to handle this booking.'}
+          </p>
+
+          {ownerStaff.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              No staff added yet. Add team members from the Staff page.
+            </p>
+          ) : (
+            <Select value={selectedStaff} onValueChange={setSelectedStaff}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select team member" />
+              </SelectTrigger>
+              <SelectContent>
+                {ownerStaff.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}{s.phone ? ` · ${s.phone}` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          <div className="flex gap-2 mt-2">
+            {assignDialogBooking?.acceptOnAssign && (
+              <Button variant="outline" className="flex-1"
+                disabled={actioning === assignDialogBooking?.id}
+                onClick={() => handleAccept(assignDialogBooking.id, assignDialogBooking.serviceName)}>
+                Accept without assigning
+              </Button>
+            )}
+            <Button
+              className="flex-1"
+              disabled={!selectedStaff || actioning === assignDialogBooking?.id}
+              onClick={() => {
+                if (assignDialogBooking?.acceptOnAssign) {
+                  handleAccept(assignDialogBooking.id, assignDialogBooking.serviceName, selectedStaff);
+                } else {
+                  handleAssignStaff();
+                }
+              }}
+            >
+              {actioning === assignDialogBooking?.id
+                ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> Saving…</>
+                : assignDialogBooking?.acceptOnAssign ? 'Accept & Assign' : 'Assign'
+              }
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

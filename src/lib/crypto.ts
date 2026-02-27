@@ -106,7 +106,7 @@ export async function switchToAvalanche(): Promise<void> {
   }
 }
 
-// ─── Injected Wallet: Send USDT / USDC ───────────────────────────────────────
+// ─── Injected Wallet: Send USDT / USDC (single transfer) ─────────────────────
 
 export async function sendCryptoPaymentInjected(
   token: 'usdt' | 'usdc',
@@ -138,6 +138,49 @@ export async function sendCryptoPaymentInjected(
   const tx = await contract.transfer(recipientAddress, amountInUnits);
   const receipt = await tx.wait();
   return (receipt as { hash: string }).hash;
+}
+
+// ─── Injected Wallet: Split payment (10% AutoFlow, 90% owner) ────────────────
+// Two on-chain transfers — balance is checked upfront so both are guaranteed.
+
+async function sendSplitPaymentInjected(
+  token: 'usdt' | 'usdc',
+  totalUsdAmount: number,
+  autoflowWallet: string,
+  ownerWallet: string,
+): Promise<string> {
+  if (!window.ethereum) throw new Error('No wallet found.');
+  const tokenInfo = TOKENS[token];
+
+  const provider = new BrowserProvider(window.ethereum);
+  const signer = await provider.getSigner();
+  const contract = new Contract(tokenInfo.address, ERC20_ABI, signer);
+
+  // Check balance covers full amount before any transfer
+  const totalInUnits = parseUnits(totalUsdAmount.toFixed(6), tokenInfo.decimals);
+  const address = await signer.getAddress();
+  const balance = await contract.balanceOf(address) as bigint;
+  if (balance < totalInUnits) {
+    const balFmt = (Number(balance) / 10 ** tokenInfo.decimals).toFixed(2);
+    throw new Error(
+      `Insufficient ${token.toUpperCase()} balance. You have ${balFmt}, need ${totalUsdAmount.toFixed(2)}.`
+    );
+  }
+
+  const autoflowAmount = parseUnits((totalUsdAmount * 0.10).toFixed(6), tokenInfo.decimals);
+  const ownerAmount    = parseUnits((totalUsdAmount * 0.90).toFixed(6), tokenInfo.decimals);
+
+  // 1. AutoFlow platform fee (10%)
+  const tx1 = await contract.transfer(autoflowWallet, autoflowAmount);
+  await tx1.wait();
+
+  // 2. Car wash owner revenue (90%)
+  const ownerTarget = ownerWallet && ownerWallet !== '0x0000000000000000000000000000000000000000'
+    ? ownerWallet
+    : autoflowWallet; // fallback: owner hasn't set a wallet yet
+  const tx2 = await contract.transfer(ownerTarget, ownerAmount);
+  const receipt2 = await tx2.wait();
+  return (receipt2 as { hash: string }).hash;
 }
 
 // ─── Payment Steps ────────────────────────────────────────────────────────────

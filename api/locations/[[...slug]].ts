@@ -19,13 +19,13 @@ async function handleIndex(req: VercelRequest, res: VercelResponse) {
     let locations;
     if (ownerId) {
       locations = await sql`
-        SELECT l.*, u.first_name || ' ' || u.last_name as owner_name
+        SELECT l.*, u.first_name || ' ' || u.last_name as owner_name, u.wallet_address as owner_wallet_address
         FROM locations l JOIN users u ON u.id = l.owner_id
         WHERE l.owner_id = ${ownerId as string} ORDER BY l.name
       `;
     } else if (activeOnly !== 'false') {
       locations = await sql`
-        SELECT l.*, u.first_name || ' ' || u.last_name as owner_name
+        SELECT l.*, u.first_name || ' ' || u.last_name as owner_name, u.wallet_address as owner_wallet_address
         FROM locations l JOIN users u ON u.id = l.owner_id
         WHERE l.is_active = true ORDER BY l.city, l.name
       `;
@@ -33,11 +33,11 @@ async function handleIndex(req: VercelRequest, res: VercelResponse) {
       const auth = requireAuth(req, res);
       if (!auth || auth.role !== 'admin') return;
       locations = await sql`
-        SELECT l.*, u.first_name || ' ' || u.last_name as owner_name
+        SELECT l.*, u.first_name || ' ' || u.last_name as owner_name, u.wallet_address as owner_wallet_address
         FROM locations l JOIN users u ON u.id = l.owner_id ORDER BY l.city, l.name
       `;
     }
-    return res.status(200).json(locations.map(l => ({ ...mapLocation(l), ownerName: l.owner_name })));
+    return res.status(200).json(locations.map(l => ({ ...mapLocation(l), ownerName: l.owner_name, ownerWalletAddress: l.owner_wallet_address || null })));
   }
 
   if (req.method === 'POST') {

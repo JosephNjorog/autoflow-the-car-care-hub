@@ -236,8 +236,8 @@ export default function OwnerServices() {
       await api.post('/services', { templateId: template.id });
       invalidate();
       toast({
-        title: 'Added to Your Services',
-        description: `"${template.name}" has been added. You can now adjust the price and activate it.`,
+        title: 'Service Added & Active',
+        description: `"${template.name}" is now visible to customers. Go to My Services to adjust the price or hide it.`,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed';
@@ -317,7 +317,7 @@ export default function OwnerServices() {
             <>
               {activeCount === 0 && services.length > 0 && (
                 <div className="mb-4 px-4 py-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-700 dark:text-amber-400">
-                  ⚠️ You have {services.length} service{services.length !== 1 ? 's' : ''} but none are active — customers won't see any services at your locations until you enable at least one.
+                  ⚠️ None of your {services.length} service{services.length !== 1 ? 's are' : ' is'} active — customers won't see any services until you enable at least one using the toggle on each card.
                 </div>
               )}
 

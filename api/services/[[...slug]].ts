@@ -150,7 +150,7 @@ async function handleIndex(req: VercelRequest, res: VercelResponse) {
       if (existing) return res.status(409).json({ error: 'You already have a service with this name.' });
       const [service] = await sql`
         INSERT INTO services (owner_id, name, description, price, duration, category, is_active)
-        VALUES (${ownerId}, ${template.name}, ${template.description}, ${template.default_price}, ${template.default_duration}, ${template.category}, false)
+        VALUES (${ownerId}, ${template.name}, ${template.description}, ${template.default_price}, ${template.default_duration}, ${template.category}, true)
         RETURNING *
       `;
       return res.status(201).json(mapService(service));
@@ -159,8 +159,8 @@ async function handleIndex(req: VercelRequest, res: VercelResponse) {
     const { name, description, price, duration, category, imageUrl } = req.body;
     if (!name || !price || !duration) return res.status(400).json({ error: 'Name, price, and duration are required' });
     const [service] = await sql`
-      INSERT INTO services (owner_id, name, description, price, duration, category, image_url)
-      VALUES (${ownerId}, ${name}, ${description || null}, ${price}, ${duration}, ${category || 'Basic'}, ${imageUrl || null})
+      INSERT INTO services (owner_id, name, description, price, duration, category, image_url, is_active)
+      VALUES (${ownerId}, ${name}, ${description || null}, ${price}, ${duration}, ${category || 'Basic'}, ${imageUrl || null}, true)
       RETURNING *
     `;
     return res.status(201).json(mapService(service));

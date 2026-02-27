@@ -319,12 +319,13 @@ export async function sendBookingConfirmation(
 export async function sendBookingStatusEmail(
   email: string,
   customerName: string,
-  status: 'confirmed' | 'in_progress' | 'completed' | 'cancelled',
+  status: 'confirmed' | 'in_progress' | 'awaiting_confirmation' | 'completed' | 'cancelled' | string,
   data: {
     serviceName: string;
     locationName: string;
     date: string;
     loyaltyPoints?: number;
+    payAtPickup?: boolean;
   }
 ): Promise<void> {
   const configs: Record<string, { subject: string; headline: string; icon: string; box: string; message: string; cta?: string; ctaPath?: string }> = {
@@ -346,14 +347,25 @@ export async function sendBookingStatusEmail(
       cta: 'Track Progress',
       ctaPath: '/bookings',
     },
+    awaiting_confirmation: {
+      subject: `Your car is ready for pickup — ${data.serviceName}`,
+      headline: data.payAtPickup ? 'Your car is ready — time to pay & confirm!' : 'Your car is ready for pickup!',
+      icon: '🚗',
+      box: 'success-box',
+      message: data.payAtPickup
+        ? `Your <strong>${data.serviceName}</strong> at <strong>${data.locationName}</strong> is complete and looking great! Please open the AutoFlow app, confirm the service, and complete your payment to release the car.`
+        : `Your <strong>${data.serviceName}</strong> at <strong>${data.locationName}</strong> is complete and looking great! Please check the after-photos in the app and tap <strong>Confirm Pickup</strong> to release payment to the car wash team.`,
+      cta: data.payAtPickup ? 'Pay & Confirm Pickup' : 'Confirm Pickup',
+      ctaPath: '/customer/bookings',
+    },
     completed: {
       subject: `Service complete — ${data.serviceName}`,
-      headline: 'Your car is ready!',
+      headline: 'Service confirmed — thank you!',
       icon: '🎉',
       box: 'success-box',
-      message: `Your <strong>${data.serviceName}</strong> is complete. We hope you're happy with the results! ${data.loyaltyPoints ? `You've earned <strong>${data.loyaltyPoints} loyalty points</strong> for this booking.` : ''} Don't forget to leave a review.`,
-      cta: 'Leave a Review',
-      ctaPath: '/bookings',
+      message: `Your <strong>${data.serviceName}</strong> is complete and payment has been released. We hope your car looks amazing! ${data.loyaltyPoints ? `You've earned <strong>${data.loyaltyPoints} loyalty points</strong> for this booking.` : ''}`,
+      cta: 'Book Again',
+      ctaPath: '/customer/book',
     },
     cancelled: {
       subject: `Booking cancelled — ${data.serviceName}`,
@@ -362,7 +374,7 @@ export async function sendBookingStatusEmail(
       box: 'danger-box',
       message: `Your <strong>${data.serviceName}</strong> booking at <strong>${data.locationName}</strong> on <strong>${data.date}</strong> has been cancelled. If this was unexpected, please contact support.`,
       cta: 'Book Again',
-      ctaPath: '/book',
+      ctaPath: '/customer/book',
     },
   };
 

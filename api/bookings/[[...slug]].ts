@@ -15,8 +15,11 @@ function mapBooking(b: Record<string, unknown>) {
     staffId: b.staff_id, staffName: b.staff_name,
     date: b.scheduled_date, time: b.scheduled_time,
     status: b.status, paymentStatus: b.payment_status, paymentMethod: b.payment_method,
+    paymentTiming: b.payment_timing || 'now',
     beforePhotos: b.before_photos || [], afterPhotos: b.after_photos || [],
     rating: b.rating, review: b.review, notes: b.notes, createdAt: b.created_at,
+    awaitingConfirmationAt: b.awaiting_confirmation_at || null,
+    escrowReleasedAt: b.escrow_released_at || null,
   };
 }
 
@@ -57,7 +60,20 @@ async function handleIndex(req: VercelRequest, res: VercelResponse) {
   const auth = requireAuth(req, res);
   if (!auth) return;
 
+  // Lazy migration: escrow columns
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_timing TEXT DEFAULT 'now'`.catch(() => {});
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS awaiting_confirmation_at TIMESTAMPTZ`.catch(() => {});
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS escrow_released_at TIMESTAMPTZ`.catch(() => {});
+
   if (req.method === 'GET') {
+    // Auto-release escrow: bookings awaiting confirmation >2 hours → auto-complete + release
+    await sql`
+      UPDATE bookings SET status = 'completed', payment_status = 'released', escrow_released_at = NOW()
+      WHERE status = 'awaiting_confirmation'
+        AND payment_status = 'captured'
+        AND awaiting_confirmation_at < NOW() - INTERVAL '2 hours'
+    `.catch(() => {}); // Column may not exist yet on first run
+
     const { status, date } = req.query;
     let bookings: Record<string, unknown>[];
 
@@ -89,9 +105,12 @@ async function handleIndex(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'POST') {
     if (auth.role !== 'customer') return res.status(403).json({ error: 'Only customers can create bookings' });
 
-    const { vehicleId, serviceId, locationId, date, time, paymentMethod, notes } = req.body;
+    const { vehicleId, serviceId, locationId, date, time, paymentMethod, notes, paymentTiming } = req.body;
     if (!serviceId || !locationId || !date || !time || !paymentMethod) {
       return res.status(400).json({ error: 'Service, location, date, time, and payment method are required' });
+    }
+    if (paymentMethod === 'cash') {
+      return res.status(400).json({ error: 'Cash payments are not accepted. Please use M-Pesa, card, or crypto.' });
     }
 
     const [service] = await sql`SELECT id, name, price FROM services WHERE id = ${serviceId} AND is_active = true`;
@@ -106,8 +125,8 @@ async function handleIndex(req: VercelRequest, res: VercelResponse) {
     }
 
     const [booking] = await sql`
-      INSERT INTO bookings (customer_id, vehicle_id, service_id, location_id, scheduled_date, scheduled_time, payment_method, notes)
-      VALUES (${auth.userId}, ${vehicleId || null}, ${serviceId}, ${locationId}, ${date}, ${time}, ${paymentMethod}, ${notes || null})
+      INSERT INTO bookings (customer_id, vehicle_id, service_id, location_id, scheduled_date, scheduled_time, payment_method, notes, payment_timing)
+      VALUES (${auth.userId}, ${vehicleId || null}, ${serviceId}, ${locationId}, ${date}, ${time}, ${paymentMethod}, ${notes || null}, ${paymentTiming || 'now'})
       RETURNING id
     `;
 
@@ -155,35 +174,103 @@ async function handleById(req: VercelRequest, res: VercelResponse, id: string) {
   }
 
   if (req.method === 'PATCH') {
-    // Ensure staff_id column exists (lazy migration)
+    // Lazy migrations
     await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS staff_id UUID`.catch(() => {});
+    await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_timing TEXT DEFAULT 'now'`.catch(() => {});
+    await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS awaiting_confirmation_at TIMESTAMPTZ`.catch(() => {});
+    await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS escrow_released_at TIMESTAMPTZ`.catch(() => {});
 
     const [booking] = await sql`SELECT * FROM bookings WHERE id = ${id}`;
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
 
-    const { status, detailerId, staffId, rating, review, beforePhotos, afterPhotos } = req.body;
+    const { status, detailerId, staffId, rating, review, beforePhotos, afterPhotos, confirmPickup } = req.body;
+
+    // ── Customer confirms service is done + releases escrow ───────────────────
+    if (confirmPickup) {
+      if (auth.role !== 'customer' || booking.customer_id !== auth.userId)
+        return res.status(403).json({ error: 'Only the customer can confirm service completion' });
+      if (booking.status !== 'awaiting_confirmation')
+        return res.status(400).json({ error: 'Service is not awaiting confirmation' });
+
+      await sql`UPDATE bookings SET status = 'completed', escrow_released_at = NOW() WHERE id = ${id}`;
+
+      if (booking.payment_status === 'captured') {
+        // Pay-now escrow: funds were held, now release
+        await sql`UPDATE bookings SET payment_status = 'released' WHERE id = ${id}`;
+        await sql`UPDATE transactions SET status = 'completed' WHERE booking_id = ${id} AND status = 'captured'`;
+      } else {
+        // Pay-at-pickup: payment was just collected or not yet — mark released
+        await sql`UPDATE bookings SET payment_status = 'released' WHERE id = ${id}`;
+        await sql`UPDATE transactions SET status = 'completed' WHERE booking_id = ${id}`;
+      }
+
+      // Loyalty points (10 per KES 100 spent, min 10)
+      const points = 10;
+      await sql`
+        INSERT INTO loyalty_points (customer_id, booking_id, points, description)
+        VALUES (${booking.customer_id}, ${id}, ${points}, 'Service confirmed by customer')
+        ON CONFLICT DO NOTHING
+      `;
+
+      // Notify car wash owner that payment was released
+      await sql`
+        INSERT INTO notifications (user_id, title, message, type)
+        SELECT s.owner_id, 'Payment Released ✓',
+          'Customer confirmed the service is complete. Your payment has been released.',
+          'payment'
+        FROM bookings b JOIN services s ON s.id = b.service_id WHERE b.id = ${id}
+      `;
+
+      // Increment wash count for assigned staff
+      if (booking.staff_id) {
+        await sql`UPDATE owner_staff SET total_washes = total_washes + 1 WHERE id = ${booking.staff_id}`;
+      }
+
+      const [updated] = await rawSql(`${BOOKING_QUERY} WHERE b.id = $1`, [id]);
+      return res.status(200).json(mapBooking(updated));
+    }
 
     if (status) {
       const allowed: Record<string, string[]> = {
         customer: ['cancelled'],
-        detailer: ['in_progress', 'completed'],
-        owner: ['confirmed', 'cancelled'],
-        admin: ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled'],
+        detailer: ['in_progress', 'awaiting_confirmation'],
+        owner: ['confirmed', 'cancelled', 'awaiting_confirmation'],
+        admin: ['pending', 'confirmed', 'in_progress', 'awaiting_confirmation', 'completed', 'cancelled'],
       };
       if (!allowed[auth.role]?.includes(status)) return res.status(403).json({ error: `Your role cannot set status to '${status}'` });
 
       await sql`UPDATE bookings SET status = ${status} WHERE id = ${id}`;
 
+      // Service is done — notify customer to confirm pickup and release payment
+      if (status === 'awaiting_confirmation') {
+        await sql`UPDATE bookings SET awaiting_confirmation_at = NOW() WHERE id = ${id}`;
+        const [cust] = await sql`
+          SELECT c.id, c.first_name, c.email, s.name as service_name, l.name as location_name, b.scheduled_date::text as date, b.payment_timing
+          FROM bookings b JOIN users c ON c.id = b.customer_id JOIN services s ON s.id = b.service_id JOIN locations l ON l.id = b.location_id WHERE b.id = ${id}
+        `;
+        if (cust) {
+          const payAtPickup = cust.payment_timing === 'pickup';
+          const msg = payAtPickup
+            ? `Your ${cust.service_name} is complete! Tap to pay and confirm pickup.`
+            : `Your ${cust.service_name} is complete and looks great! Tap to view photos and confirm pickup to release payment.`;
+          await sql`INSERT INTO notifications (user_id, title, message, type) VALUES (${cust.id}, 'Your Car is Ready! 🚗', ${msg}, 'booking')`;
+          sendBookingStatusEmail(
+            cust.email as string, cust.first_name as string, 'awaiting_confirmation' as string,
+            { serviceName: cust.service_name as string, locationName: cust.location_name as string, date: cust.date as string, payAtPickup: !!payAtPickup }
+          ).catch(() => {});
+        }
+      }
+
+      // Admin/legacy force-complete (bypasses escrow — keeps backward compat)
       if (status === 'completed') {
-        const points = Math.floor(parseFloat(booking.price || '0') / 10) || 10;
+        const points = 10;
         await sql`
           INSERT INTO loyalty_points (customer_id, booking_id, points, description)
           SELECT b.customer_id, b.id, ${points}, s.name || ' completed'
           FROM bookings b JOIN services s ON s.id = b.service_id WHERE b.id = ${id}
         `;
-        await sql`UPDATE bookings SET payment_status = 'completed' WHERE id = ${id}`;
+        await sql`UPDATE bookings SET payment_status = 'completed', escrow_released_at = NOW() WHERE id = ${id}`;
         await sql`UPDATE transactions SET status = 'completed' WHERE booking_id = ${id}`;
-        // Increment wash count for assigned offline staff
         if (booking.staff_id) {
           await sql`UPDATE owner_staff SET total_washes = total_washes + 1 WHERE id = ${booking.staff_id}`;
         }

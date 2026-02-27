@@ -42,7 +42,7 @@ async function handleMpesaStk(req: VercelRequest, res: VercelResponse) {
   `;
   if (!booking) return res.status(404).json({ error: 'Booking not found' });
   if (auth.role === 'customer' && booking.customer_id !== auth.userId) return res.status(403).json({ error: 'Not authorized' });
-  if (booking.payment_status === 'completed') return res.status(400).json({ error: 'This booking has already been paid' });
+  if (['completed', 'captured', 'released'].includes(booking.payment_status as string)) return res.status(400).json({ error: 'This booking has already been paid' });
 
   const amount = Math.ceil(parseFloat(booking.price));
   let mpesaPhone = phone.replace(/\s+/g, '').replace(/^0/, '254').replace(/^\+/, '');
@@ -111,14 +111,12 @@ async function handleMpesaCallback(req: VercelRequest, res: VercelResponse) {
       const mpesaReceiptNumber = getItem('MpesaReceiptNumber') as string;
       const amount = getItem('Amount') as number;
 
-      await sql`UPDATE transactions SET status = 'completed', mpesa_code = ${mpesaReceiptNumber || null}, amount = ${amount || transaction.amount} WHERE mpesa_checkout_request_id = ${CheckoutRequestID}`;
-      await sql`UPDATE bookings SET payment_status = 'completed', status = CASE WHEN status = 'pending' THEN 'confirmed' ELSE status END WHERE id = ${transaction.booking_id}`;
+      // Escrow: funds captured by AutoFlow — not yet released to owner
+      await sql`UPDATE transactions SET status = 'captured', mpesa_code = ${mpesaReceiptNumber || null}, amount = ${amount || transaction.amount} WHERE mpesa_checkout_request_id = ${CheckoutRequestID}`;
+      await sql`UPDATE bookings SET payment_status = 'captured', status = CASE WHEN status = 'pending' THEN 'confirmed' ELSE status END WHERE id = ${transaction.booking_id}`;
 
-      const points = Math.floor((amount || parseFloat(transaction.amount)) / 10);
-      if (points > 0) await sql`INSERT INTO loyalty_points (customer_id, booking_id, points, description) VALUES (${transaction.customer_id}, ${transaction.booking_id}, ${points}, 'M-Pesa payment') ON CONFLICT DO NOTHING`;
-
-      await sql`INSERT INTO notifications (user_id, title, message, type) VALUES (${transaction.customer_id}, 'Payment Confirmed', ${'KES ' + (amount || transaction.amount).toLocaleString() + ' received via M-Pesa. Code: ' + (mpesaReceiptNumber || 'N/A')}, 'payment')`;
-      await sql`INSERT INTO notifications (user_id, title, message, type) SELECT s.owner_id, 'Payment Received', ${'M-Pesa payment of KES ' + (amount || transaction.amount).toLocaleString() + ' received.'}, 'payment' FROM bookings b JOIN services s ON s.id = b.service_id WHERE b.id = ${transaction.booking_id}`;
+      await sql`INSERT INTO notifications (user_id, title, message, type) VALUES (${transaction.customer_id}, 'Payment Captured ✓', ${'KES ' + (amount || transaction.amount) + ' received via M-Pesa (Code: ' + (mpesaReceiptNumber || 'N/A') + '). Funds held in escrow until you confirm service completion.'}, 'payment')`;
+      await sql`INSERT INTO notifications (user_id, title, message, type) SELECT s.owner_id, 'Booking Paid (Escrow)', ${'M-Pesa payment of KES ' + (amount || transaction.amount) + ' captured. Funds release when customer confirms pickup.'}, 'payment' FROM bookings b JOIN services s ON s.id = b.service_id WHERE b.id = ${transaction.booking_id}`;
     } else {
       await sql`UPDATE transactions SET status = 'failed' WHERE mpesa_checkout_request_id = ${CheckoutRequestID}`;
       await sql`INSERT INTO notifications (user_id, title, message, type) VALUES (${transaction.customer_id}, 'Payment Failed', ${'M-Pesa payment failed: ' + ResultDesc + '. Please try again.'}, 'payment')`;
@@ -185,6 +183,75 @@ async function handleTransactions(req: VercelRequest, res: VercelResponse) {
   })));
 }
 
+// ── POST /api/payments/mpesa-stk-pickup ──────────────────────────────────────
+// Initiates M-Pesa STK Push for pay-at-pickup bookings (status = awaiting_confirmation)
+async function handleMpesaStkPickup(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  const auth = requireAuth(req, res);
+  if (!auth || auth.role !== 'customer') return;
+
+  const { bookingId, phone } = req.body;
+  if (!bookingId || !phone) return res.status(400).json({ error: 'Booking ID and phone number are required' });
+
+  const [booking] = await sql`
+    SELECT b.id, b.customer_id, b.payment_status, b.payment_timing, b.status, s.price, s.name as service_name, l.name as location_name
+    FROM bookings b JOIN services s ON s.id = b.service_id JOIN locations l ON l.id = b.location_id
+    WHERE b.id = ${bookingId}
+  `;
+  if (!booking) return res.status(404).json({ error: 'Booking not found' });
+  if (booking.customer_id !== auth.userId) return res.status(403).json({ error: 'Not authorized' });
+  if (booking.payment_timing !== 'pickup') return res.status(400).json({ error: 'This booking is not a pay-at-pickup booking' });
+  if (booking.status !== 'awaiting_confirmation') return res.status(400).json({ error: 'Service must be complete before payment' });
+  if (['completed', 'captured', 'released'].includes(booking.payment_status as string)) return res.status(400).json({ error: 'This booking has already been paid' });
+
+  const amount = Math.ceil(parseFloat(booking.price));
+  let mpesaPhone = phone.replace(/\s+/g, '').replace(/^0/, '254').replace(/^\+/, '');
+  if (!mpesaPhone.startsWith('254')) mpesaPhone = '254' + mpesaPhone;
+
+  const shortcode = process.env.MPESA_SHORTCODE!;
+  const passkey = process.env.MPESA_PASSKEY!;
+  const timestamp = formatTimestamp();
+  const password = Buffer.from(`${shortcode}${passkey}${timestamp}`).toString('base64');
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://autoflow.vercel.app';
+  const callbackUrl = `${appUrl}/api/payments/mpesa-callback`;
+
+  // Ensure transaction row exists
+  await sql`
+    INSERT INTO transactions (booking_id, customer_id, amount, method, status)
+    VALUES (${bookingId}, ${auth.userId}, ${booking.price}, 'mpesa', 'pending')
+    ON CONFLICT DO NOTHING
+  `;
+
+  try {
+    const accessToken = await getMpesaAccessToken();
+    const stkRes = await fetch(`${MPESA_BASE}/mpesa/stkpush/v1/processrequest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({
+        BusinessShortCode: shortcode, Password: password, Timestamp: timestamp,
+        TransactionType: 'CustomerPayBillOnline', Amount: amount,
+        PartyA: mpesaPhone, PartyB: shortcode, PhoneNumber: mpesaPhone,
+        CallBackURL: callbackUrl,
+        AccountReference: `AUTOFLOW-${bookingId.slice(0, 8).toUpperCase()}`,
+        TransactionDesc: `AutoFlow Pickup: ${booking.service_name} at ${booking.location_name}`,
+      }),
+    });
+    const stkData = await stkRes.json() as { ResponseCode: string; CheckoutRequestID: string; MerchantRequestID: string; CustomerMessage: string; ResponseDescription: string };
+    if (stkData.ResponseCode !== '0') return res.status(400).json({ error: stkData.ResponseDescription || 'M-Pesa request failed. Please try again.' });
+
+    await sql`
+      UPDATE transactions SET
+        mpesa_checkout_request_id = ${stkData.CheckoutRequestID},
+        mpesa_merchant_request_id = ${stkData.MerchantRequestID}
+      WHERE booking_id = ${bookingId} AND status = 'pending'
+    `;
+    return res.status(200).json({ message: 'M-Pesa STK Push sent. Please enter your PIN.', checkoutRequestId: stkData.CheckoutRequestID, customerMessage: stkData.CustomerMessage });
+  } catch (err) {
+    console.error('M-Pesa STK Pickup error:', err);
+    return res.status(500).json({ error: 'Failed to initiate M-Pesa payment. Please try again.' });
+  }
+}
+
 // ── Router ────────────────────────────────────────────────────────────────────
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
@@ -192,10 +259,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const slug = urlPath.replace(/^\/api\/[^/]+\/?/, '').split('/').filter(Boolean);
   const route = slug.join('/');
 
-  if (route === 'mpesa-stk')      return handleMpesaStk(req, res);
-  if (route === 'mpesa-callback') return handleMpesaCallback(req, res);
-  if (route === 'status')         return handleStatus(req, res);
-  if (route === 'transactions')   return handleTransactions(req, res);
+  if (route === 'mpesa-stk')         return handleMpesaStk(req, res);
+  if (route === 'mpesa-stk-pickup')  return handleMpesaStkPickup(req, res);
+  if (route === 'mpesa-callback')    return handleMpesaCallback(req, res);
+  if (route === 'status')            return handleStatus(req, res);
+  if (route === 'transactions')      return handleTransactions(req, res);
 
   return res.status(404).json({ error: 'Not found' });
 }

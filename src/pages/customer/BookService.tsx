@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckCircle, Clock, Droplets, MapPin, Star, Search,
   SlidersHorizontal, Car, Smartphone, ChevronLeft, ChevronRight,
-  Wallet, CreditCard, Phone, Shield, Zap, ArrowLeft, Loader2, Banknote
+  Wallet, CreditCard, Phone, Shield, Zap, ArrowLeft, Loader2, CalendarClock, ShoppingBag
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -34,6 +34,7 @@ export default function BookService() {
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
+  const [paymentTiming, setPaymentTiming] = useState<'now' | 'pickup'>('now');
   const [mpesaPhone, setMpesaPhone] = useState(user?.phone || '');
   const [step, setStep] = useState<'browse' | 'center' | 'checkout' | 'paying' | 'confirmed'>('browse');
   const [bookingId, setBookingId] = useState('');
@@ -88,7 +89,7 @@ export default function BookService() {
       setPollCount(count);
       try {
         const status = await api.get<any>(`/payments/status?bookingId=${bId}`);
-        if (status.paymentStatus === 'completed') {
+        if (['completed', 'captured', 'released'].includes(status.paymentStatus)) {
           if (pollRef.current) clearInterval(pollRef.current);
           setStep('confirmed');
         } else if (count >= 20) {
@@ -113,8 +114,15 @@ export default function BookService() {
         date: selectedDate,
         time: selectedTime,
         paymentMethod,
+        paymentTiming,
       });
       setBookingId(booking.id);
+
+      // Pay at pickup — no payment now, booking is confirmed when owner accepts
+      if (paymentTiming === 'pickup') {
+        setStep('confirmed');
+        return;
+      }
 
       if (paymentMethod === 'mpesa') {
         if (!mpesaPhone) {
@@ -143,6 +151,7 @@ export default function BookService() {
           setStep('checkout');
         }
       } else {
+        // Card or other — booking created, payment handled externally
         setStep('confirmed');
       }
     } catch (err) {
@@ -158,9 +167,10 @@ export default function BookService() {
 
   // ─── CONFIRMED ────────────────────────────────────
   if (step === 'confirmed') {
+    const isPickup = paymentTiming === 'pickup';
     return (
       <DashboardLayout>
-        <div className="flex flex-col items-center justify-center py-20 text-center">
+        <div className="flex flex-col items-center justify-center py-20 text-center max-w-sm mx-auto">
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200 }}
             className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mb-6">
             <CheckCircle className="w-10 h-10 text-success" />
@@ -169,7 +179,22 @@ export default function BookService() {
           <p className="text-muted-foreground mb-1">
             {selectedServiceData?.name} at {selectedLocation?.name}
           </p>
-          <p className="text-sm text-muted-foreground mb-8">{selectedDate} • {selectedTime}</p>
+          <p className="text-sm text-muted-foreground mb-4">{selectedDate} • {selectedTime}</p>
+          {isPickup ? (
+            <div className="rounded-xl bg-accent/10 border border-accent/20 p-4 mb-8 text-left w-full">
+              <p className="text-sm font-medium text-foreground mb-1">Pay at Pickup</p>
+              <p className="text-xs text-muted-foreground">
+                No payment taken yet. You'll receive a notification when your car is ready. Confirm pickup in the app to pay and release the car.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-xl bg-success/10 border border-success/20 p-4 mb-8 text-left w-full">
+              <p className="text-sm font-medium text-foreground mb-1">Payment in Escrow</p>
+              <p className="text-xs text-muted-foreground">
+                Your payment is securely held by AutoFlow. It will be released to the car wash only after you confirm service completion.
+              </p>
+            </div>
+          )}
           <div className="flex gap-3">
             <Button onClick={() => navigate('/customer/bookings')}>View Bookings</Button>
             <Button variant="outline" onClick={() => {
@@ -285,17 +310,40 @@ export default function BookService() {
             </div>
           </div>
 
+          {/* ── Payment Timing ──────────────────────────────── */}
+          <h3 className="text-sm font-medium text-foreground mb-1">When to pay</h3>
+          <p className="text-xs text-muted-foreground mb-3">
+            Funds are held in escrow by AutoFlow and released to the car wash only after you confirm service completion.
+          </p>
+          <div className="grid grid-cols-2 gap-2 mb-5">
+            {[
+              { id: 'now' as const, icon: Zap, label: 'Pay Now', desc: 'Secure escrow at booking' },
+              { id: 'pickup' as const, icon: CalendarClock, label: 'Pay at Pickup', desc: 'Pay when your car is ready' },
+            ].map(t => (
+              <button key={t.id} onClick={() => setPaymentTiming(t.id)}
+                className={`flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${paymentTiming === t.id ? 'border-primary bg-primary/5' : 'border-border bg-card hover:border-primary/30'}`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${paymentTiming === t.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                  <t.icon className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-foreground">{t.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{t.desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* ── Payment Method ──────────────────────────────── */}
           <h3 className="text-sm font-medium text-foreground mb-1">Pay with</h3>
           <p className="text-xs text-muted-foreground mb-3">
             A 10% platform fee is included in all prices — this is how AutoFlow stays free for car wash owners.
           </p>
           <div className="space-y-2 mb-4">
             {[
-              { id: 'mpesa', icon: Phone, label: 'M-Pesa', desc: 'Pay instantly via STK Push', badge: 'Recommended' },
+              { id: 'mpesa', icon: Phone, label: 'M-Pesa', desc: 'Pay via STK Push to your phone', badge: 'Recommended' },
               { id: 'usdt', icon: Wallet, label: 'USDT (Tether)', desc: `≈ $${usdAmount} USDT on Avalanche`, badge: 'Web3' },
               { id: 'usdc', icon: Shield, label: 'USDC', desc: `≈ $${usdAmount} USDC on Avalanche`, badge: 'Web3' },
               { id: 'card', icon: CreditCard, label: 'Card', desc: 'Visa, Mastercard', badge: '' },
-              { id: 'cash', icon: Banknote, label: 'Cash on Arrival', desc: 'Pay the detailer directly — last resort only', badge: 'Last resort' },
             ].map(m => (
               <button key={m.id} onClick={() => setPaymentMethod(m.id)}
                 className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all ${paymentMethod === m.id ? 'border-primary bg-primary/5 shadow-card' : 'border-border bg-card hover:border-primary/30'}`}>
@@ -351,11 +399,12 @@ export default function BookService() {
           <Button className="w-full h-12 text-base" disabled={!paymentMethod || isCreatingBooking} onClick={handleBookAndPay}>
             {isCreatingBooking ? (
               <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing...</>
-            ) : paymentMethod === 'mpesa' ? 'Pay with M-Pesa' :
+            ) : paymentTiming === 'pickup' ? (
+              <><ShoppingBag className="w-4 h-4 mr-2" /> Confirm Booking (Pay at Pickup)</>
+            ) : paymentMethod === 'mpesa' ? 'Pay Now with M-Pesa' :
               paymentMethod === 'usdt' ? 'Connect Wallet & Pay USDT' :
               paymentMethod === 'usdc' ? 'Connect Wallet & Pay USDC' :
-              paymentMethod === 'card' ? 'Pay with Card' :
-              paymentMethod === 'cash' ? 'Confirm Booking (Pay on Arrival)' :
+              paymentMethod === 'card' ? 'Pay Now with Card' :
               'Select payment method'}
           </Button>
         </div>

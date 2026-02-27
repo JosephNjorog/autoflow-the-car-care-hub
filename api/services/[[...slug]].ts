@@ -14,6 +14,81 @@ function mapService(s: Record<string, unknown>) {
   };
 }
 
+// ── GET /api/services/templates ───────────────────────────────────────────────
+// Returns all global service templates. Creates and seeds the table on first call.
+const SEED_TEMPLATES = [
+  // Exterior Wash
+  { name: 'Exterior Rinse & Wash',    description: 'Basic soap wash and rinse of the full exterior.', price: 300,   duration: 20, category: 'Exterior Wash' },
+  { name: 'Express Exterior Wash',    description: 'Quick hand wash with microfiber dry.',              price: 500,   duration: 30, category: 'Exterior Wash' },
+  { name: 'Hand Wash & Shine',        description: 'Thorough hand wash, wheel rinse, and microfiber dry.', price: 700, duration: 40, category: 'Exterior Wash' },
+  { name: 'Undercarriage Wash',       description: 'High-pressure rinse of the undercarriage to remove mud and debris.', price: 500, duration: 20, category: 'Exterior Wash' },
+  // Interior Clean
+  { name: 'Interior Vacuum',          description: 'Full interior vacuum including seats, floor mats, and boot.', price: 400, duration: 30, category: 'Interior Clean' },
+  { name: 'Interior Wipe Down',       description: 'Dashboard, door panels, and surface wipe with vacuum.', price: 600, duration: 45, category: 'Interior Clean' },
+  { name: 'Interior Deep Clean',      description: 'Complete interior clean: seats, carpets, dashboard, vents, and boot.', price: 1500, duration: 90, category: 'Interior Clean' },
+  { name: 'Odor Elimination',         description: 'Ozone or steam treatment to neutralise odours inside the cabin.', price: 1500, duration: 60, category: 'Interior Clean' },
+  // Combined Packages
+  { name: 'Basic Wash & Vacuum',      description: 'Exterior wash plus a quick interior vacuum.',              price: 700,  duration: 45, category: 'Packages' },
+  { name: 'Standard Wash',            description: 'Hand wash, interior vacuum, and dashboard wipe.',          price: 1000, duration: 60, category: 'Packages' },
+  { name: 'Premium Wash',             description: 'Full hand wash, complete interior clean, and tyre shine.', price: 1500, duration: 75, category: 'Packages' },
+  { name: 'Executive Wash',           description: 'Full exterior detail, complete interior, finishing wax, and tyre dressing.', price: 2000, duration: 90, category: 'Packages' },
+  // Polish & Protection
+  { name: 'Exterior Polish',          description: 'Machine or hand polish to remove light swirl marks and restore shine.', price: 3000, duration: 120, category: 'Polish & Protection' },
+  { name: 'Wax Application',          description: 'Carnauba wax coat for a deep shine and paint protection.',  price: 2000, duration: 60, category: 'Polish & Protection' },
+  { name: 'Paint Correction',         description: 'Multi-stage decontamination and correction for deeper scratches and oxidation.', price: 8000, duration: 240, category: 'Polish & Protection' },
+  { name: 'Ceramic Coating',          description: 'Long-lasting nano-ceramic paint protection layer.',          price: 15000, duration: 300, category: 'Polish & Protection' },
+  { name: 'Paint Protection Film',    description: 'Self-healing PPF applied to high-impact panels.',            price: 20000, duration: 360, category: 'Polish & Protection' },
+  // Full Detailing
+  { name: 'Full Detail',              description: 'Comprehensive interior and exterior detailing service.',      price: 5000, duration: 180, category: 'Full Detail' },
+  // Engine & Wheels
+  { name: 'Engine Bay Clean',         description: 'Safe degreasing and rinse of the engine bay.',               price: 1500, duration: 60, category: 'Engine & Wheels' },
+  { name: 'Tyre & Wheel Clean',       description: 'Brake dust removal, wheel scrub, and tyre shine.',           price: 500,  duration: 20, category: 'Engine & Wheels' },
+  { name: 'Alloy Wheel Polish',       description: 'Deep clean and machine polish of alloy wheels.',             price: 1500, duration: 45, category: 'Engine & Wheels' },
+  // Glass & Upholstery
+  { name: 'Windscreen Treatment',     description: 'Water-repellent coating applied to the windscreen.',         price: 500,  duration: 20, category: 'Glass & Upholstery' },
+  { name: 'Upholstery Shampoo',       description: 'Deep shampoo clean of fabric seats and floor carpets.',      price: 2000, duration: 90, category: 'Glass & Upholstery' },
+  { name: 'Leather Conditioning',     description: 'Clean, condition, and protect genuine leather seats.',        price: 2000, duration: 75, category: 'Glass & Upholstery' },
+  { name: 'Window Tinting',           description: 'UV-protective window tint film applied to side and rear glass.', price: 5000, duration: 120, category: 'Glass & Upholstery' },
+];
+
+async function handleTemplates(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+
+  // Lazy-create the table
+  await sql`
+    CREATE TABLE IF NOT EXISTS service_templates (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name TEXT NOT NULL,
+      description TEXT,
+      default_price NUMERIC(10,2) NOT NULL,
+      default_duration INTEGER NOT NULL,
+      category TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+
+  // Seed if empty
+  const [{ count }] = await sql`SELECT COUNT(*)::int AS count FROM service_templates` as [{ count: number }];
+  if (count === 0) {
+    for (const t of SEED_TEMPLATES) {
+      await sql`
+        INSERT INTO service_templates (name, description, default_price, default_duration, category)
+        VALUES (${t.name}, ${t.description}, ${t.price}, ${t.duration}, ${t.category})
+      `;
+    }
+  }
+
+  const templates = await sql`SELECT * FROM service_templates ORDER BY category, default_price`;
+  return res.status(200).json(templates.map(t => ({
+    id: t.id,
+    name: t.name,
+    description: t.description,
+    defaultPrice: parseFloat(t.default_price as string),
+    defaultDuration: t.default_duration,
+    category: t.category,
+  })));
+}
+
 // ── GET/POST /api/services ────────────────────────────────────────────────────
 async function handleIndex(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {

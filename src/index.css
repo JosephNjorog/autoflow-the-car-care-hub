@@ -6,103 +6,127 @@
 
 @layer base {
   :root {
-    --background: 40 33% 96%;
-    --foreground: 150 20% 15%;
+    /* ── Icy Light Mode ───────────────────────────────────────────────────── */
+    --background: 210 45% 97%;          /* crisp ice white */
+    --foreground: 218 45% 13%;          /* deep navy ink */
 
-    --card: 40 30% 98%;
-    --card-foreground: 150 20% 15%;
+    --card: 210 40% 99%;
+    --card-foreground: 218 45% 13%;
 
-    --popover: 40 30% 98%;
-    --popover-foreground: 150 20% 15%;
+    --popover: 210 40% 99%;
+    --popover-foreground: 218 45% 13%;
 
-    --primary: 152 35% 25%;
-    --primary-foreground: 40 33% 96%;
+    --primary: 207 85% 40%;             /* ocean blue */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 40 25% 90%;
-    --secondary-foreground: 150 20% 15%;
+    --secondary: 210 35% 91%;           /* light ice */
+    --secondary-foreground: 218 40% 20%;
 
-    --muted: 40 20% 92%;
-    --muted-foreground: 150 10% 45%;
+    --muted: 210 30% 93%;
+    --muted-foreground: 215 22% 50%;
 
-    --accent: 36 80% 55%;
-    --accent-foreground: 150 20% 15%;
+    --accent: 191 92% 48%;              /* electric cyan */
+    --accent-foreground: 218 50% 10%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 40 20% 88%;
-    --input: 40 20% 88%;
-    --ring: 152 35% 25%;
+    --border: 210 30% 85%;
+    --input: 210 30% 85%;
+    --ring: 207 85% 40%;
 
-    --radius: 0.75rem;
+    --radius: 0.875rem;
 
-    --sidebar-background: 150 20% 15%;
-    --sidebar-foreground: 40 20% 85%;
-    --sidebar-primary: 36 80% 55%;
-    --sidebar-primary-foreground: 150 20% 15%;
-    --sidebar-accent: 150 15% 22%;
-    --sidebar-accent-foreground: 40 20% 90%;
-    --sidebar-border: 150 15% 22%;
-    --sidebar-ring: 36 80% 55%;
+    /* ── Sidebar — deep polar navy ────────────────────────────────────────── */
+    --sidebar-background: 222 55% 10%;
+    --sidebar-foreground: 210 30% 82%;
+    --sidebar-primary: 191 92% 55%;
+    --sidebar-primary-foreground: 222 55% 8%;
+    --sidebar-accent: 222 45% 17%;
+    --sidebar-accent-foreground: 210 30% 90%;
+    --sidebar-border: 222 38% 17%;
+    --sidebar-ring: 191 92% 55%;
 
-    --success: 152 45% 40%;
+    --success: 172 60% 36%;
     --success-foreground: 0 0% 100%;
-    --warning: 36 80% 55%;
-    --warning-foreground: 150 20% 15%;
-    --info: 200 60% 50%;
+    --warning: 38 90% 52%;
+    --warning-foreground: 218 45% 10%;
+    --info: 207 85% 48%;
     --info-foreground: 0 0% 100%;
 
-    --gradient-warm: linear-gradient(135deg, hsl(40, 33%, 96%), hsl(36, 40%, 92%));
-    --gradient-primary: linear-gradient(135deg, hsl(152, 35%, 25%), hsl(152, 40%, 18%));
-    --gradient-accent: linear-gradient(135deg, hsl(36, 80%, 55%), hsl(36, 90%, 45%));
-    --gradient-hero: linear-gradient(180deg, hsl(40, 33%, 96%) 0%, hsl(40, 30%, 92%) 100%);
+    --gradient-warm: linear-gradient(135deg, hsl(210, 45%, 97%), hsl(200, 55%, 93%));
+    --gradient-primary: linear-gradient(135deg, hsl(207, 85%, 40%), hsl(220, 90%, 28%));
+    --gradient-accent: linear-gradient(135deg, hsl(191, 92%, 48%), hsl(200, 88%, 38%));
+    --gradient-hero: linear-gradient(180deg, hsl(210, 45%, 97%) 0%, hsl(205, 55%, 93%) 100%);
+    --gradient-ice: linear-gradient(135deg, hsl(210, 50%, 98%), hsl(195, 60%, 92%), hsl(210, 50%, 96%));
 
-    --shadow-sm: 0 1px 2px hsl(150 20% 15% / 0.04);
-    --shadow-md: 0 4px 12px hsl(150 20% 15% / 0.06);
-    --shadow-lg: 0 12px 32px hsl(150 20% 15% / 0.08);
-    --shadow-glow: 0 0 24px hsl(36 80% 55% / 0.15);
+    --shadow-sm: 0 1px 3px hsl(210 55% 35% / 0.06);
+    --shadow-md: 0 4px 16px hsl(210 55% 35% / 0.09);
+    --shadow-lg: 0 12px 40px hsl(210 55% 35% / 0.13);
+    --shadow-glow: 0 0 32px hsl(191 92% 48% / 0.22);
+    --shadow-ice: 0 8px 32px hsl(207 85% 40% / 0.15), 0 0 0 1px hsl(210 40% 85% / 0.5);
 
     --font-display: 'DM Serif Display', serif;
     --font-body: 'DM Sans', sans-serif;
   }
 
   .dark {
-    --background: 150 20% 8%;
-    --foreground: 40 20% 92%;
+    /* ── Icy Dark Mode — deep polar night ─────────────────────────────────── */
+    --background: 222 38% 8%;
+    --foreground: 210 28% 92%;
 
-    --card: 150 18% 12%;
-    --card-foreground: 40 20% 92%;
+    --card: 220 35% 12%;
+    --card-foreground: 210 28% 92%;
 
-    --popover: 150 18% 12%;
-    --popover-foreground: 40 20% 92%;
+    --popover: 220 35% 12%;
+    --popover-foreground: 210 28% 92%;
 
-    --primary: 36 80% 55%;
-    --primary-foreground: 150 20% 10%;
+    --primary: 191 88% 52%;             /* bright cyan */
+    --primary-foreground: 222 45% 7%;
 
-    --secondary: 150 15% 18%;
-    --secondary-foreground: 40 20% 92%;
+    --secondary: 220 28% 18%;
+    --secondary-foreground: 210 25% 85%;
 
-    --muted: 150 12% 16%;
-    --muted-foreground: 40 15% 60%;
+    --muted: 220 25% 16%;
+    --muted-foreground: 210 18% 58%;
 
-    --accent: 152 35% 30%;
-    --accent-foreground: 40 20% 92%;
+    --accent: 207 78% 48%;
+    --accent-foreground: 210 28% 92%;
 
-    --destructive: 0 62% 30%;
+    --destructive: 0 62% 32%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 150 12% 18%;
-    --input: 150 12% 18%;
-    --ring: 36 80% 55%;
+    --border: 220 25% 19%;
+    --input: 220 25% 19%;
+    --ring: 191 88% 52%;
 
-    --sidebar-background: 150 22% 6%;
-    --sidebar-foreground: 40 20% 85%;
-    --sidebar-primary: 36 80% 55%;
-    --sidebar-primary-foreground: 150 20% 10%;
-    --sidebar-accent: 150 15% 14%;
-    --sidebar-accent-foreground: 40 20% 90%;
-    --sidebar-border: 150 12% 14%;
-    --sidebar-ring: 36 80% 55%;
+    --sidebar-background: 225 48% 5%;
+    --sidebar-foreground: 210 25% 78%;
+    --sidebar-primary: 191 90% 58%;
+    --sidebar-primary-foreground: 225 45% 7%;
+    --sidebar-accent: 222 38% 13%;
+    --sidebar-accent-foreground: 210 25% 88%;
+    --sidebar-border: 222 32% 14%;
+    --sidebar-ring: 191 90% 58%;
+
+    --success: 172 58% 40%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 88% 55%;
+    --warning-foreground: 218 45% 10%;
+    --info: 207 82% 52%;
+    --info-foreground: 0 0% 100%;
+
+    --gradient-warm: linear-gradient(135deg, hsl(222, 38%, 10%), hsl(215, 42%, 14%));
+    --gradient-primary: linear-gradient(135deg, hsl(191, 88%, 50%), hsl(207, 85%, 38%));
+    --gradient-accent: linear-gradient(135deg, hsl(191, 88%, 52%), hsl(207, 82%, 42%));
+    --gradient-hero: linear-gradient(180deg, hsl(222, 38%, 8%) 0%, hsl(218, 42%, 11%) 100%);
+    --gradient-ice: linear-gradient(135deg, hsl(222, 40%, 11%), hsl(215, 45%, 15%), hsl(220, 38%, 12%));
+
+    --shadow-sm: 0 1px 3px hsl(222 50% 5% / 0.4);
+    --shadow-md: 0 4px 16px hsl(222 50% 5% / 0.5);
+    --shadow-lg: 0 12px 40px hsl(222 50% 5% / 0.6);
+    --shadow-glow: 0 0 32px hsl(191 88% 52% / 0.25);
+    --shadow-ice: 0 8px 32px hsl(222 50% 5% / 0.5), 0 0 0 1px hsl(220 30% 22% / 0.6);
   }
 }
 
@@ -122,56 +146,88 @@
 }
 
 @layer utilities {
-  .font-display {
-    font-family: var(--font-display);
-  }
+  .font-display { font-family: var(--font-display); }
+  .font-body    { font-family: var(--font-body); }
 
-  .font-body {
-    font-family: var(--font-body);
-  }
+  .gradient-warm    { background: var(--gradient-warm); }
+  .gradient-primary { background: var(--gradient-primary); }
+  .gradient-accent  { background: var(--gradient-accent); }
+  .gradient-hero    { background: var(--gradient-hero); }
+  .gradient-ice     { background: var(--gradient-ice); }
 
-  .gradient-warm {
-    background: var(--gradient-warm);
-  }
+  .shadow-card       { box-shadow: var(--shadow-md); }
+  .shadow-card-hover { box-shadow: var(--shadow-lg); }
+  .shadow-glow       { box-shadow: var(--shadow-glow); }
+  .shadow-ice        { box-shadow: var(--shadow-ice); }
 
-  .gradient-primary {
-    background: var(--gradient-primary);
-  }
-
-  .gradient-accent {
-    background: var(--gradient-accent);
-  }
-
-  .gradient-hero {
-    background: var(--gradient-hero);
-  }
-
-  .shadow-card {
-    box-shadow: var(--shadow-md);
-  }
-
-  .shadow-card-hover {
-    box-shadow: var(--shadow-lg);
-  }
-
-  .shadow-glow {
-    box-shadow: var(--shadow-glow);
-  }
-
+  /* ── Icy text gradient ─────────────────────────────────────────────────── */
   .text-gradient {
-    background: linear-gradient(135deg, hsl(152, 35%, 25%), hsl(36, 80%, 55%));
+    background: linear-gradient(135deg, hsl(207, 85%, 38%), hsl(191, 92%, 52%));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-
   .dark .text-gradient {
-    background: linear-gradient(135deg, hsl(36, 80%, 55%), hsl(36, 90%, 65%));
+    background: linear-gradient(135deg, hsl(191, 90%, 60%), hsl(207, 85%, 72%));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
+  /* ── Glassmorphism ─────────────────────────────────────────────────────── */
+  .glass {
+    background: rgba(245, 250, 255, 0.70);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(200, 225, 255, 0.40);
+  }
+  .dark .glass {
+    background: rgba(14, 22, 45, 0.72);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(80, 140, 220, 0.12);
+  }
+
+  /* ── Frost card ────────────────────────────────────────────────────────── */
+  .frost {
+    background: linear-gradient(135deg, rgba(255,255,255,0.82), rgba(215,238,255,0.65));
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(170, 210, 255, 0.50);
+  }
+  .dark .frost {
+    background: linear-gradient(135deg, rgba(18,30,58,0.82), rgba(12,22,48,0.65));
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(80, 140, 220, 0.18);
+  }
+
+  /* ── Ice shimmer ───────────────────────────────────────────────────────── */
+  .ice-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .ice-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 30%,
+      rgba(180, 225, 255, 0.28) 50%,
+      transparent 70%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 3.5s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  @keyframes shimmer {
+    0%   { background-position: -200% center; }
+    100% { background-position: 200% center; }
+  }
+
+  /* ── Scrollbar ─────────────────────────────────────────────────────────── */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;

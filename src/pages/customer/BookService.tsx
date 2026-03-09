@@ -131,7 +131,7 @@ export default function BookService() {
           setIsCreatingBooking(false);
           return;
         }
-        await api.post('/payments/mpesa-stk', { bookingId: booking.id, phone: mpesaPhone });
+        await api.post('/payments/mpesa-stk', { bookingId: booking.id, phone: mpesaPhone, amount: totalAmount });
         setStep('paying');
         startPolling(booking.id);
       } else if (paymentMethod === 'usdt' || paymentMethod === 'usdc') {

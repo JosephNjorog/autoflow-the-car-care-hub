@@ -211,7 +211,12 @@ export default function BookService() {
   };
 
   const conversionRate = livePrices?.kesPerUsd ?? 129.05;
-  const usdAmount = selectedServiceData ? (selectedServiceData.price / conversionRate).toFixed(2) : '0';
+  const basePrice = selectedServiceData?.price || 0;
+  const maintenanceFee = Math.round(basePrice * 0.05);      // 5% app maintenance
+  const LOGISTICS_FEE = 200;                                 // KES 200 flat logistics
+  const logisticsFee = includeLogistics ? LOGISTICS_FEE : 0;
+  const totalAmount = basePrice + maintenanceFee + logisticsFee;
+  const usdAmount = totalAmount ? (totalAmount / conversionRate).toFixed(2) : '0';
 
   // ─── CONFIRMED ────────────────────────────────────
   if (step === 'confirmed') {

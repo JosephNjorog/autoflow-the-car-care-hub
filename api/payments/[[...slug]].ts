@@ -44,7 +44,10 @@ async function handleMpesaStk(req: VercelRequest, res: VercelResponse) {
   if (auth.role === 'customer' && booking.customer_id !== auth.userId) return res.status(403).json({ error: 'Not authorized' });
   if (['completed', 'captured', 'released'].includes(booking.payment_status as string)) return res.status(400).json({ error: 'This booking has already been paid' });
 
-  const amount = Math.ceil(parseFloat(booking.price));
+  // Accept optional amount override (includes maintenance fee + logistics)
+  const amount = req.body.amount
+    ? Math.ceil(parseFloat(req.body.amount))
+    : Math.ceil(parseFloat(booking.price));
   let mpesaPhone = phone.replace(/\s+/g, '').replace(/^0/, '254').replace(/^\+/, '');
   if (!mpesaPhone.startsWith('254')) mpesaPhone = '254' + mpesaPhone;
 

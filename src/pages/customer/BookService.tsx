@@ -35,6 +35,7 @@ export default function BookService() {
   const [selectedTime, setSelectedTime] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [paymentTiming, setPaymentTiming] = useState<'now' | 'pickup'>('now');
+  const [includeLogistics, setIncludeLogistics] = useState(false);
   const [mpesaPhone, setMpesaPhone] = useState(user?.phone || '');
   const [step, setStep] = useState<'browse' | 'center' | 'checkout' | 'paying' | 'confirmed'>('browse');
   const [bookingId, setBookingId] = useState('');

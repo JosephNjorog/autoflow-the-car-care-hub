@@ -77,12 +77,6 @@ const testimonials = [
   },
 ];
 
-const stats = [
-  { value: '2,400+', label: 'Washes Completed', icon: <Droplets className="w-5 h-5" /> },
-  { value: '150+', label: 'Partner Businesses', icon: <Car className="w-5 h-5" /> },
-  { value: '4.9★', label: 'Average Rating', icon: <Star className="w-5 h-5" /> },
-  { value: '< 2 min', label: 'Average Booking Time', icon: <Clock className="w-5 h-5" /> },
-];
 
 const payments = [
   { label: 'M-Pesa', color: 'bg-green-500', text: 'text-white', short: 'M' },
@@ -182,25 +176,9 @@ export default function LandingPage() {
               </div>
 
               {/* Social proof row */}
-              <div className="flex items-center gap-4">
-                <div className="flex -space-x-2.5">
-                  {[44, 32, 68, 75, 22].map((n) => (
-                    <img
-                      key={n}
-                      src={`https://randomuser.me/api/portraits/${n % 2 === 0 ? 'women' : 'men'}/${n}.jpg`}
-                      alt="customer"
-                      className="w-9 h-9 rounded-full border-2 border-background object-cover"
-                    />
-                  ))}
-                </div>
-                <div>
-                  <div className="flex items-center gap-1 mb-0.5">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground"><span className="font-semibold text-foreground">2,400+</span> happy customers</p>
-                </div>
+              <div className="flex items-center gap-3 p-3 rounded-xl border border-border/60 bg-card/60 w-fit">
+                <BadgeCheck className="w-5 h-5 text-primary shrink-0" />
+                <p className="text-sm text-muted-foreground">Launching in Nairobi · <span className="text-foreground font-medium">Be among the first</span></p>
               </div>
             </motion.div>
 
@@ -297,30 +275,6 @@ export default function LandingPage() {
           ))}
         </motion.div>
       </div>
-
-      {/* ── Stats ─────────────────────────────────────────────────────────────── */}
-      <section className="py-16 md:py-20">
-        <div className="max-w-7xl mx-auto px-4 md:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-            {stats.map((s, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="frost rounded-xl p-5 text-center shadow-ice"
-              >
-                <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center mx-auto mb-3">
-                  {s.icon}
-                </div>
-                <p className="text-2xl md:text-3xl font-display text-foreground mb-1">{s.value}</p>
-                <p className="text-xs text-muted-foreground">{s.label}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* ── Features ──────────────────────────────────────────────────────────── */}
       <section id="features" className="py-20 md:py-28 bg-card/50">
@@ -563,7 +517,7 @@ export default function LandingPage() {
               Ready for a car that <em className="not-italic text-gradient">shines?</em>
             </h2>
             <p className="text-muted-foreground max-w-md mx-auto mb-8">
-              Join 2,400+ customers and 150+ businesses already using AutoFlow across Kenya.
+              The smarter way to book, pay for, and manage car care in Kenya.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Button size="lg" onClick={() => navigate('/register')} className="px-10 shadow-glow ice-shimmer">

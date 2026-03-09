@@ -357,9 +357,33 @@ export default function BookService() {
               <span className="text-sm text-muted-foreground">Date & Time</span>
               <span className="text-sm font-medium text-foreground">{selectedDate} • {selectedTime}</span>
             </div>
-            <div className="border-t border-border pt-3 flex items-center justify-between">
-              <span className="font-display text-foreground">Total</span>
-              <span className="font-display text-xl text-foreground">KES {selectedServiceData.price.toLocaleString()}</span>
+            <div className="border-t border-border pt-3 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Service price</span>
+                <span className="text-foreground">KES {basePrice.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Platform maintenance (5%)</span>
+                <span className="text-foreground">KES {maintenanceFee.toLocaleString()}</span>
+              </div>
+              {/* Logistics fee — optional for mobile/house-call services */}
+              <div className="flex items-center justify-between text-sm">
+                <button
+                  onClick={() => setIncludeLogistics(v => !v)}
+                  className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-left">
+                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${includeLogistics ? 'border-primary bg-primary' : 'border-border'}`}>
+                    {includeLogistics && <div className="w-2 h-2 rounded-sm bg-white" />}
+                  </div>
+                  <span>Add detailer logistics (house call)</span>
+                </button>
+                <span className={includeLogistics ? 'text-foreground' : 'text-muted-foreground/50'}>
+                  KES {LOGISTICS_FEE.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center justify-between pt-1 border-t border-border">
+                <span className="font-display text-foreground">Total</span>
+                <span className="font-display text-xl text-foreground">KES {totalAmount.toLocaleString()}</span>
+              </div>
             </div>
           </div>
 

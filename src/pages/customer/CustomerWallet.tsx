@@ -389,7 +389,7 @@ export default function CustomerWallet() {
                         <p className="text-sm text-muted-foreground">Connect your existing crypto wallet to pay with USDT or USDC.</p>
                         {!isInjectedWalletAvailable() && (
                           <p className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded-lg p-2">
-                            No wallet extension detected. Install MetaMask or Core Wallet, or open this page in Trust Wallet's browser.
+                            No wallet extension detected. Install Core Wallet (recommended for Avalanche) or MetaMask, or open this page in Trust Wallet's browser.
                           </p>
                         )}
                         <Button onClick={() => handleConnectInjected('your wallet')} variant="outline" className="w-full">

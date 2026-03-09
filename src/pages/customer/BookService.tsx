@@ -286,7 +286,7 @@ export default function BookService() {
               </p>
               {!isWalletAvailable() && (
                 <p className="text-xs text-destructive mb-4">
-                  No wallet detected. Please install MetaMask or open this in Trust Wallet's browser.
+                  No wallet detected. Install <a href="https://core.app" target="_blank" rel="noopener noreferrer" className="underline font-medium">Core Wallet</a> (recommended) or <a href="https://metamask.io" target="_blank" rel="noopener noreferrer" className="underline font-medium">MetaMask</a>.
                 </p>
               )}
               <div className="flex flex-col gap-2 w-full mb-8">
@@ -467,7 +467,7 @@ export default function BookService() {
               {!isWalletAvailable() && (
                 <div className="rounded-lg bg-destructive/5 border border-destructive/20 p-3">
                   <p className="text-xs text-destructive">
-                    ⚠️ No crypto wallet detected. Install <a href="https://metamask.io" target="_blank" rel="noopener noreferrer" className="underline font-medium">MetaMask</a> or open this page in <a href="https://trustwallet.com" target="_blank" rel="noopener noreferrer" className="underline font-medium">Trust Wallet</a>'s browser to pay with crypto.
+                    ⚠️ No crypto wallet detected. Install <a href="https://core.app" target="_blank" rel="noopener noreferrer" className="underline font-medium">Core Wallet</a> (recommended for Avalanche) or <a href="https://metamask.io" target="_blank" rel="noopener noreferrer" className="underline font-medium">MetaMask</a> to pay with crypto.
                   </p>
                 </div>
               )}
@@ -480,8 +480,8 @@ export default function BookService() {
             ) : paymentTiming === 'pickup' ? (
               <><ShoppingBag className="w-4 h-4 mr-2" /> Confirm Booking (Pay at Pickup)</>
             ) : paymentMethod === 'mpesa' ? 'Pay Now with M-Pesa' :
-              paymentMethod === 'usdt' ? 'Connect Wallet & Pay USDT' :
-              paymentMethod === 'usdc' ? 'Connect Wallet & Pay USDC' :
+              paymentMethod === 'usdt' ? 'Connect Core/MetaMask & Pay USDT' :
+              paymentMethod === 'usdc' ? 'Connect Core/MetaMask & Pay USDC' :
               'Select payment method'}
           </Button>
         </div>

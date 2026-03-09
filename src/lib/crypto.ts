@@ -104,7 +104,7 @@ export function getInjectedWalletName(): string {
 export async function connectInjectedWallet(): Promise<string> {
   if (!window.ethereum) {
     throw new Error(
-      'No crypto wallet found. Install MetaMask, Core Wallet, or Trust Wallet.'
+      'No crypto wallet found. Install Core Wallet (core.app), MetaMask, or Trust Wallet.'
     );
   }
   const provider = new BrowserProvider(window.ethereum);

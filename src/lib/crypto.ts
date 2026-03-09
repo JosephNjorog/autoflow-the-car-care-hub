@@ -6,14 +6,21 @@
  *   2. WDK in-app wallet (Tether WDK embedded wallet, no extension needed)
  *
  * Both send USDT or USDC on Avalanche C-Chain to the AutoFlow payment wallet.
+ *
+ * Set VITE_USE_TESTNET=true in .env.local to use Avalanche Fuji testnet
+ * for demo/recording purposes. Fuji faucet: https://faucet.avax.network
  */
 
 import { BrowserProvider, Contract, parseUnits } from 'ethers';
 import { sendViaWDK, hasWDKWallet, type WDKPaymentStep } from './wdk';
 
-// ─── Avalanche C-Chain Config ─────────────────────────────────────────────────
+// ─── Testnet flag ─────────────────────────────────────────────────────────────
 
-const AVALANCHE_CHAIN = {
+export const USE_TESTNET = import.meta.env.VITE_USE_TESTNET === 'true';
+
+// ─── Avalanche Chain Config ───────────────────────────────────────────────────
+
+const AVALANCHE_MAINNET = {
   chainId: '0xA86A', // 43114
   chainName: 'Avalanche C-Chain',
   nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
@@ -21,11 +28,30 @@ const AVALANCHE_CHAIN = {
   blockExplorerUrls: ['https://snowtrace.io/'],
 };
 
-// USDT and USDC token addresses on Avalanche C-Chain Mainnet
-const TOKENS: Record<string, { address: string; decimals: number }> = {
-  usdt: { address: '0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7', decimals: 6 },
-  usdc: { address: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E', decimals: 6 },
+const AVALANCHE_FUJI = {
+  chainId: '0xa869', // 43113
+  chainName: 'Avalanche Fuji Testnet',
+  nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
+  rpcUrls: ['https://api.avax-test.network/ext/bc/C/rpc'],
+  blockExplorerUrls: ['https://testnet.snowtrace.io/'],
 };
+
+const AVALANCHE_CHAIN = USE_TESTNET ? AVALANCHE_FUJI : AVALANCHE_MAINNET;
+
+// ─── Token Addresses ──────────────────────────────────────────────────────────
+
+const TOKENS: Record<string, { address: string; decimals: number }> = USE_TESTNET
+  ? {
+      // Fuji Testnet — Circle's test USDC (works for both USDT + USDC demos)
+      // Get test tokens at: https://faucet.circle.com → select Avalanche Fuji
+      usdt: { address: '0x5425890298aed601595a70AB815c96711a31Bc65', decimals: 6 },
+      usdc: { address: '0x5425890298aed601595a70AB815c96711a31Bc65', decimals: 6 },
+    }
+  : {
+      // Avalanche C-Chain Mainnet
+      usdt: { address: '0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7', decimals: 6 },
+      usdc: { address: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E', decimals: 6 },
+    };
 
 const ERC20_ABI = [
   'function transfer(address to, uint256 amount) returns (bool)',
@@ -89,7 +115,7 @@ export async function connectInjectedWallet(): Promise<string> {
   return accounts[0];
 }
 
-// ─── Injected Wallet: Switch to Avalanche ────────────────────────────────────
+// ─── Injected Wallet: Switch to Avalanche (mainnet or Fuji) ──────────────────
 
 export async function switchToAvalanche(): Promise<void> {
   if (!window.ethereum) throw new Error('No wallet found.');
@@ -99,6 +125,7 @@ export async function switchToAvalanche(): Promise<void> {
       params: [{ chainId: AVALANCHE_CHAIN.chainId }],
     });
   } catch {
+    // Chain not added yet — add it
     await window.ethereum.request({
       method: 'wallet_addEthereumChain',
       params: [AVALANCHE_CHAIN],
@@ -130,8 +157,12 @@ export async function sendCryptoPaymentInjected(
 
   if (balance < amountInUnits) {
     const balFmt = (Number(balance) / 10 ** tokenInfo.decimals).toFixed(2);
+    const tokenLabel = token.toUpperCase();
+    const faucetHint = USE_TESTNET
+      ? ' Get test tokens at faucet.circle.com (select Avalanche Fuji).'
+      : '';
     throw new Error(
-      `Insufficient ${token.toUpperCase()} balance. You have ${balFmt} ${token.toUpperCase()}, need ${usdAmount.toFixed(2)}.`
+      `Insufficient ${tokenLabel} balance. You have ${balFmt} ${tokenLabel}, need ${usdAmount.toFixed(2)}.${faucetHint}`
     );
   }
 
@@ -141,7 +172,6 @@ export async function sendCryptoPaymentInjected(
 }
 
 // ─── Injected Wallet: Split payment (10% AutoFlow, 90% owner) ────────────────
-// Two on-chain transfers — balance is checked upfront so both are guaranteed.
 
 async function sendSplitPaymentInjected(
   token: 'usdt' | 'usdc',
@@ -156,14 +186,16 @@ async function sendSplitPaymentInjected(
   const signer = await provider.getSigner();
   const contract = new Contract(tokenInfo.address, ERC20_ABI, signer);
 
-  // Check balance covers full amount before any transfer
   const totalInUnits = parseUnits(totalUsdAmount.toFixed(6), tokenInfo.decimals);
   const address = await signer.getAddress();
   const balance = await contract.balanceOf(address) as bigint;
   if (balance < totalInUnits) {
     const balFmt = (Number(balance) / 10 ** tokenInfo.decimals).toFixed(2);
+    const faucetHint = USE_TESTNET
+      ? ' Get test tokens at faucet.circle.com (select Avalanche Fuji).'
+      : '';
     throw new Error(
-      `Insufficient ${token.toUpperCase()} balance. You have ${balFmt}, need ${totalUsdAmount.toFixed(2)}.`
+      `Insufficient ${token.toUpperCase()} balance. You have ${balFmt}, need ${totalUsdAmount.toFixed(2)}.${faucetHint}`
     );
   }
 
@@ -177,7 +209,7 @@ async function sendSplitPaymentInjected(
   // 2. Car wash owner revenue (90%)
   const ownerTarget = ownerWallet && ownerWallet !== '0x0000000000000000000000000000000000000000'
     ? ownerWallet
-    : autoflowWallet; // fallback: owner hasn't set a wallet yet
+    : autoflowWallet;
   const tx2 = await contract.transfer(ownerTarget, ownerAmount);
   const receipt2 = await tx2.wait();
   return (receipt2 as { hash: string }).hash;
@@ -191,7 +223,7 @@ export type CryptoPaymentStep =
   | 'switching'
   | 'signing'
   | 'confirming'
-  | 'preparing';   // WDK-specific step
+  | 'preparing';
 
 export type PaymentWalletType = 'injected' | 'wdk';
 
@@ -201,17 +233,6 @@ export interface CryptoPaymentCallbacks {
 
 // ─── Full Payment Flow ────────────────────────────────────────────────────────
 
-/**
- * Run the full crypto payment flow with 10/90 split.
- *
- * @param token            - 'usdt' or 'usdc'
- * @param usdAmount        - total amount in USD
- * @param callbacks        - step callbacks for UX feedback
- * @param walletType       - 'injected' (MetaMask etc.) or 'wdk'
- * @param ownerWallet      - car wash owner's Avalanche wallet (receives 90%)
- *                           AutoFlow wallet receives 10% always.
- *                           If omitted/empty, 100% goes to AutoFlow.
- */
 export async function runCryptoPayment(
   token: 'usdt' | 'usdc',
   usdAmount: number,
@@ -222,13 +243,11 @@ export async function runCryptoPayment(
   const autoflowWallet = import.meta.env.VITE_AUTOFLOW_WALLET as string;
 
   if (walletType === 'wdk') {
-    // WDK path: send full amount to AutoFlow; backend handles split reconciliation
     return sendViaWDK(token, usdAmount, autoflowWallet, {
       onStep: (step: WDKPaymentStep) => callbacks.onStep(step as CryptoPaymentStep),
     });
   }
 
-  // Injected wallet flow with on-chain split
   callbacks.onStep('connecting');
   await connectInjectedWallet();
 
@@ -246,5 +265,4 @@ export async function runCryptoPayment(
   return txHash;
 }
 
-// Keep old name as alias for compatibility
 export const connectWallet = connectInjectedWallet;

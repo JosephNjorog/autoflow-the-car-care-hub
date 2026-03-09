@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
   Droplets, Star, Shield, Smartphone, Zap, Users, ArrowRight, CheckCircle,
   Wallet, MapPin, Clock, Camera, Award, TrendingUp, Car, Wrench, CreditCard,
-  BarChart2, ChevronRight, BadgeCheck, Sparkles,
+  BarChart2, ChevronRight, BadgeCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -151,12 +151,6 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-2 gap-12 items-center">
             {/* Left — copy */}
             <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-primary text-xs font-medium mb-6">
-                <Sparkles className="w-3.5 h-3.5" />
-                Now live in Nairobi · Crypto payments on Avalanche
-              </div>
-
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-display text-foreground leading-tight mb-5">
                 Car care that{' '}
                 <em className="text-gradient not-italic">actually</em>

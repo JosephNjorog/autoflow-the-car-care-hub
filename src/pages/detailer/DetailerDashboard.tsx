@@ -33,10 +33,10 @@ export default function DetailerDashboard() {
   const handleComplete = async (bookingId: string, serviceName: string) => {
     setCompleting(bookingId);
     try {
-      await api.patch(`/bookings/${bookingId}`, { status: 'completed' });
+      await api.patch(`/bookings/${bookingId}`, { status: 'awaiting_confirmation' });
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
       queryClient.invalidateQueries({ queryKey: ['earnings'] });
-      toast({ title: 'Job Completed', description: `${serviceName} marked as complete.` });
+      toast({ title: 'Job Ready', description: `${serviceName} marked ready — waiting for customer to confirm pickup.` });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to update';
       toast({ title: 'Error', description: msg, variant: 'destructive' });

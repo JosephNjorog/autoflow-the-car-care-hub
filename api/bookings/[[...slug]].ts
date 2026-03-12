@@ -61,6 +61,8 @@ async function handleIndex(req: VercelRequest, res: VercelResponse) {
   if (!auth) return;
 
   // Lazy migrations
+  await sql`ALTER TABLE bookings ALTER COLUMN status TYPE TEXT`.catch(() => {});
+  await sql`ALTER TABLE bookings ALTER COLUMN payment_status TYPE TEXT`.catch(() => {});
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_timing TEXT DEFAULT 'now'`.catch(() => {});
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS awaiting_confirmation_at TIMESTAMPTZ`.catch(() => {});
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS escrow_released_at TIMESTAMPTZ`.catch(() => {});

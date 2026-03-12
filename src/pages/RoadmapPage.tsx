@@ -1,8 +1,130 @@
 import { Link } from 'react-router-dom';
-import { Brain, Coins, Zap, Shield, BarChart3, Globe, CheckCircle, Clock, Sparkles, ArrowLeft, Layers, ChevronRight } from 'lucide-react';
+import {
+  Brain, Coins, Zap, Shield, BarChart3, Globe, CheckCircle, Clock, Sparkles,
+  ArrowLeft, Layers, ChevronRight, Lock, CreditCard, Video, Wallet, Key,
+  MapPin, Star, Bell, Users, Camera, TrendingUp, ShieldCheck,
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 
+// ── Shipped milestones ────────────────────────────────────────────────────────
+const shippedItems = [
+  {
+    icon: Key,
+    gradient: 'from-slate-500 to-slate-700',
+    glow: 'shadow-slate-500/20',
+    category: 'Auth & Roles',
+    title: 'Multi-Role Authentication',
+    description: 'JWT auth with four roles (customer, detailer, owner, admin), Google OAuth, password reset, and owner approval gating.',
+  },
+  {
+    icon: ShieldCheck,
+    gradient: 'from-teal-500 to-emerald-600',
+    glow: 'shadow-teal-500/20',
+    category: 'Booking & Escrow',
+    title: 'Booking System + Escrow',
+    description: 'Full booking lifecycle (pending → confirmed → in_progress → completed) with 2-hour escrow auto-release protecting customer funds.',
+  },
+  {
+    icon: Zap,
+    gradient: 'from-green-500 to-emerald-600',
+    glow: 'shadow-green-500/20',
+    category: 'Payments',
+    title: 'M-Pesa STK Push',
+    description: 'Safaricom Daraja API integration — real-time STK Push with async callback webhook and frontend polling.',
+  },
+  {
+    icon: Coins,
+    gradient: 'from-amber-500 to-orange-500',
+    glow: 'shadow-amber-500/20',
+    category: 'Web3 Payments',
+    title: 'USDT / USDC on Avalanche',
+    description: 'ERC-20 token payments via injected wallets (Core, MetaMask, Trust). Dual-transfer splits 10% to AutoFlow, 90% to owner.',
+  },
+  {
+    icon: Wallet,
+    gradient: 'from-violet-500 to-purple-600',
+    glow: 'shadow-violet-500/20',
+    category: 'Embedded Wallet',
+    title: 'Tether WDK Wallet',
+    description: 'Self-custodial browser wallet via Tether WDK — 12-word seed phrase, HD derivation, balance display, and private-key auto-wipe.',
+  },
+  {
+    icon: TrendingUp,
+    gradient: 'from-blue-500 to-sky-500',
+    glow: 'shadow-blue-500/20',
+    category: 'Oracles',
+    title: 'Chainlink Price Feeds',
+    description: 'On-chain AVAX/USDT/USDC prices from Chainlink AggregatorV3 contracts, with staleness guard and CoinGecko fallback.',
+  },
+  {
+    icon: MapPin,
+    gradient: 'from-rose-500 to-pink-600',
+    glow: 'shadow-rose-500/20',
+    category: 'Owner Tools',
+    title: 'Business Management',
+    description: 'Full CRUD for locations, services (28 templates), analytics dashboard with revenue/booking/customer charts.',
+  },
+  {
+    icon: Star,
+    gradient: 'from-yellow-500 to-amber-500',
+    glow: 'shadow-yellow-500/20',
+    category: 'Loyalty',
+    title: 'Loyalty Points (4 Tiers)',
+    description: 'Earn 1pt per KES 10 spent. Tiers: Bronze → Silver → Gold → Platinum. Points history and tier progress tracker.',
+  },
+  {
+    icon: Users,
+    gradient: 'from-indigo-500 to-blue-600',
+    glow: 'shadow-indigo-500/20',
+    category: 'Staff',
+    title: 'Offline + Online Staff',
+    description: 'Owners manage offline staff (no app account) and invite online detailers. Assign either type to any booking.',
+  },
+  {
+    icon: Bell,
+    gradient: 'from-cyan-500 to-sky-500',
+    glow: 'shadow-cyan-500/20',
+    category: 'Notifications',
+    title: 'Email Notifications',
+    description: '8 transactional email templates (booking confirmation, status updates, owner approval, detailer invites) via Brevo SMTP.',
+  },
+  {
+    icon: Camera,
+    gradient: 'from-fuchsia-500 to-purple-600',
+    glow: 'shadow-fuchsia-500/20',
+    category: 'Detailer Workflow',
+    title: 'Before / After Photos',
+    description: 'Detailers upload Cloudinary photos at job start and completion — stored per booking for quality documentation.',
+  },
+  {
+    icon: ShieldCheck,
+    gradient: 'from-slate-500 to-zinc-600',
+    glow: 'shadow-slate-500/20',
+    category: 'Admin',
+    title: 'Admin & Owner Approvals',
+    description: 'Admin dashboard with owner approval queue, user management, platform-wide transactions, and booking oversight.',
+  },
+];
+
+// ── Upcoming roadmap items ────────────────────────────────────────────────────
 const roadmapItems = [
+  {
+    quarter: 'Q2 2026',
+    category: 'Live Features',
+    icon: Video,
+    gradient: 'from-sky-500 to-blue-600',
+    glow: 'shadow-sky-500/25',
+    status: 'in-progress' as const,
+    title: 'Agora RTC Live View',
+    description: 'Live video streaming between customer and detailer during service. Watch your car being cleaned in real-time for full peace of mind.',
+    features: [
+      'Real-time video stream from detailer device',
+      'Customer-side live view in the app',
+      'Session recording for dispute resolution',
+      'Low-latency Agora SDK integration',
+      'Auto-start on job status → in_progress',
+    ],
+  },
   {
     quarter: 'Q2 2026',
     category: 'AI & Intelligence',
@@ -11,12 +133,12 @@ const roadmapItems = [
     glow: 'shadow-blue-500/25',
     status: 'planned' as const,
     title: 'Kite AI Insights',
-    description: 'Smart business analytics powered by Kite AI. Predict peak demand, optimize pricing dynamically, identify underperforming services, and get AI-generated recommendations to grow your car wash business.',
+    description: 'Smart business analytics powered by Kite AI. Predict peak demand, optimise pricing dynamically, identify underperforming services, and get AI-generated recommendations.',
     features: [
       'Demand forecasting by location and season',
       'Dynamic pricing recommendations',
       'Customer churn prediction',
-      'Revenue optimization engine',
+      'Revenue optimisation engine',
       'Automated performance reports',
     ],
   },
@@ -28,13 +150,13 @@ const roadmapItems = [
     glow: 'shadow-amber-500/25',
     status: 'in-progress' as const,
     title: 'Full Crypto Payment Suite',
-    description: 'Complete on-chain payment infrastructure. Pay with any EVM token, auto-convert to KES via Chainlink oracles, and build credit history on-chain.',
+    description: 'Expand on-chain payment infrastructure. Pay with AVAX directly, auto-convert to KES via Chainlink oracles, and build credit history on-chain.',
     features: [
-      'AVAX, USDT, USDC, and more',
-      'Chainlink price feeds for real-time conversion',
+      'AVAX direct payments (in addition to USDT/USDC)',
       'Cross-chain payments via bridges',
-      'On-chain payment receipts',
+      'On-chain payment receipts & history',
       'Credit scoring from transaction history',
+      'WalletConnect v2 for mobile wallets',
     ],
   },
   {
@@ -45,13 +167,47 @@ const roadmapItems = [
     glow: 'shadow-purple-500/25',
     status: 'in-progress' as const,
     title: 'Advanced Business Intelligence',
-    description: 'Deep analytics dashboard for owners and the AutoFlow network. Customer lifetime value, cohort analysis, location benchmarking, and predictive maintenance scheduling.',
+    description: 'Deep analytics for owners and the AutoFlow network. Customer lifetime value, cohort analysis, location benchmarking, and detailer performance scoring.',
     features: [
       'Customer LTV and cohort analysis',
       'Location vs. network benchmarking',
       'Detailer performance scoring',
       'Predictive maintenance reminders',
       'Exportable reports (PDF/CSV)',
+    ],
+  },
+  {
+    quarter: 'Q2 2026',
+    category: 'Payments',
+    icon: CreditCard,
+    gradient: 'from-emerald-500 to-green-600',
+    glow: 'shadow-emerald-500/25',
+    status: 'planned' as const,
+    title: 'Stripe Card Payments',
+    description: 'Add credit/debit card as a 4th payment method alongside M-Pesa, USDT, and USDC. Supports international customers and corporate bookings.',
+    features: [
+      'Stripe Checkout integration',
+      'Visa, Mastercard, Amex support',
+      'Saved cards for repeat customers',
+      '3D Secure & fraud protection',
+      'Card receipts via email',
+    ],
+  },
+  {
+    quarter: 'Q2 2026',
+    category: 'Security',
+    icon: Lock,
+    gradient: 'from-slate-500 to-zinc-600',
+    glow: 'shadow-slate-500/25',
+    status: 'planned' as const,
+    title: 'WDK Seed Encryption',
+    description: 'Encrypt seed phrases stored in localStorage using WebCrypto AES-GCM with a user-set PIN — eliminating plaintext key exposure.',
+    features: [
+      'WebCrypto AES-GCM encryption',
+      'User-defined PIN as encryption key',
+      'Encrypted seed in localStorage (never plaintext)',
+      'PIN prompt on each wallet unlock',
+      'No PIN recovery — true self-custody',
     ],
   },
   {
@@ -62,7 +218,7 @@ const roadmapItems = [
     glow: 'shadow-red-500/25',
     status: 'planned' as const,
     title: 'Suzaku AVAX Liquid Staking',
-    description: 'Put your AutoFlow revenue to work. Stake AVAX through Suzaku Protocol directly from the platform and earn yields while your money waits. Liquid staking means you can unstake anytime.',
+    description: 'Put your AutoFlow revenue to work. Stake AVAX through Suzaku Protocol directly from the platform and earn yields while your money waits.',
     features: [
       'One-click AVAX staking via Suzaku Protocol',
       'Liquid staking tokens (sAVAX) for instant liquidity',
@@ -73,12 +229,29 @@ const roadmapItems = [
   },
   {
     quarter: 'Q3 2026',
+    category: 'Web3 Loyalty',
+    icon: Star,
+    gradient: 'from-yellow-500 to-amber-600',
+    glow: 'shadow-yellow-500/25',
+    status: 'planned' as const,
+    title: 'DH3 Soulbound NFT Loyalty',
+    description: 'Mint non-transferable soulbound NFTs representing your loyalty tier. Your Bronze → Platinum status lives on-chain and is verifiable anywhere.',
+    features: [
+      'ERC-5114 soulbound NFT per tier',
+      'Auto-upgrade on tier promotion',
+      'On-chain verification of loyalty status',
+      'NFT-gated exclusive discounts',
+      'Partner ecosystem access via NFT',
+    ],
+  },
+  {
+    quarter: 'Q3 2026',
     category: 'Security & Identity',
     icon: Shield,
     gradient: 'from-emerald-500 to-teal-600',
     glow: 'shadow-emerald-500/25',
     status: 'planned' as const,
-    title: 'Decentralized Identity (DID)',
+    title: 'Decentralised Identity (DID)',
     description: 'Self-sovereign identity for customers and detailers. Verifiable credentials, portable reputation, and privacy-preserving KYC.',
     features: [
       'W3C DID standard compliance',
@@ -89,6 +262,23 @@ const roadmapItems = [
     ],
   },
   {
+    quarter: 'Q3 2026',
+    category: 'Notifications',
+    icon: Bell,
+    gradient: 'from-orange-500 to-amber-500',
+    glow: 'shadow-orange-500/25',
+    status: 'planned' as const,
+    title: 'FCM Push Notifications',
+    description: 'Real-time push notifications on mobile and desktop via Firebase Cloud Messaging — booking updates, payment confirmations, and promotions.',
+    features: [
+      'Firebase Cloud Messaging integration',
+      'Booking status push alerts',
+      'Payment confirmation notifications',
+      'Promotional campaigns for owners',
+      'Granular user opt-in preferences',
+    ],
+  },
+  {
     quarter: 'Q4 2026',
     category: 'Global Expansion',
     icon: Globe,
@@ -96,7 +286,7 @@ const roadmapItems = [
     glow: 'shadow-cyan-500/25',
     status: 'planned' as const,
     title: 'Multi-Country Expansion',
-    description: 'AutoFlow goes beyond Kenya. Support for multiple African countries, local payment methods (MTN MoMo, Airtel Money), and multi-currency pricing.',
+    description: 'AutoFlow goes beyond Kenya. Uganda, Tanzania, Rwanda, Nigeria — with local payment methods and multi-currency pricing.',
     features: [
       'Uganda, Tanzania, Rwanda, Nigeria launch',
       'MTN Mobile Money & Airtel Money integration',
@@ -113,7 +303,7 @@ const statusConfig = {
   'done': { label: 'Shipped', dot: 'bg-green-400', badge: 'bg-green-50 text-green-700 dark:bg-green-900/40 dark:text-green-300', Icon: CheckCircle },
 } as const;
 
-const quarters = ['Q2 2026', 'Q3 2026', 'Q4 2026'];
+const upcomingQuarters = ['Q2 2026', 'Q3 2026', 'Q4 2026'];
 
 const techStack = [
   { name: 'Avalanche C-Chain', desc: 'High-throughput, low-cost L1' },
@@ -125,6 +315,8 @@ const techStack = [
 ];
 
 export default function RoadmapPage() {
+  const inProgressCount = roadmapItems.filter(r => r.status === 'in-progress').length;
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Nav */}
@@ -172,7 +364,7 @@ export default function RoadmapPage() {
             </h1>
 
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              We're building the future of car care on Avalanche — crypto payments, AI analytics, liquid staking, and decentralized identity. Here's what's coming.
+              From hackathon prototype to production platform. Here's everything we've shipped and everything coming next — built on Avalanche for real-world adoption across Africa.
             </p>
           </motion.div>
 
@@ -184,12 +376,12 @@ export default function RoadmapPage() {
             className="flex flex-wrap justify-center gap-3 mt-10"
           >
             {[
-              { label: '6 Features', sub: 'in pipeline' },
-              { label: '2 In Progress', sub: 'shipping Q2' },
-              { label: '3 Quarters', sub: 'to full launch' },
+              { label: `${shippedItems.length} Milestones`, sub: 'already shipped', color: 'text-green-600 dark:text-green-400' },
+              { label: `${inProgressCount} In Progress`, sub: 'shipping Q2 2026', color: 'text-sky-600 dark:text-sky-400' },
+              { label: `${roadmapItems.length} Features`, sub: 'in the pipeline', color: 'text-foreground' },
             ].map((stat, i) => (
-              <div key={i} className="px-5 py-3 rounded-xl bg-card border border-border text-center min-w-[120px]">
-                <div className="font-bold text-foreground">{stat.label}</div>
+              <div key={i} className="px-5 py-3 rounded-xl bg-card border border-border text-center min-w-[130px]">
+                <div className={`font-bold ${stat.color}`}>{stat.label}</div>
                 <div className="text-xs text-muted-foreground">{stat.sub}</div>
               </div>
             ))}
@@ -197,9 +389,68 @@ export default function RoadmapPage() {
         </div>
       </section>
 
-      {/* Timeline */}
+      {/* ── Shipped Section ─────────────────────────────────────────────────── */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+        {/* Section header */}
+        <motion.div
+          initial={{ opacity: 0, x: -16 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex items-center gap-4 mb-8"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white shadow-lg shadow-green-500/30">
+              <CheckCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-foreground">Q1 2026 — Shipped</h2>
+              <p className="text-xs text-muted-foreground">{shippedItems.length} milestones delivered</p>
+            </div>
+          </div>
+          <div className="flex-1 h-px bg-gradient-to-r from-green-500/30 to-transparent" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 dark:bg-green-900/40 dark:text-green-300 shrink-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+            <CheckCircle className="w-3 h-3" />
+            Shipped
+          </span>
+        </motion.div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {shippedItems.map((item, i) => {
+            const Icon = item.icon;
+            return (
+              <motion.div
+                key={item.title}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="flex gap-3 p-4 rounded-xl bg-card border border-border hover:border-green-500/30 hover:shadow-md transition-all duration-200"
+              >
+                <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${item.gradient} flex items-center justify-center text-white shrink-0 shadow-md ${item.glow}`}>
+                  <Icon className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{item.category}</p>
+                  <h3 className="text-sm font-semibold text-foreground leading-tight mb-1">{item.title}</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{item.description}</p>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ── Upcoming Timeline ───────────────────────────────────────────────── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
-        {quarters.map((quarter, qi) => {
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-10"
+        >
+          <h2 className="text-2xl font-bold text-foreground">What's Coming Next</h2>
+          <p className="text-sm text-muted-foreground mt-1">The next three quarters of planned work.</p>
+        </motion.div>
+
+        {upcomingQuarters.map((quarter, qi) => {
           const items = roadmapItems.filter(r => r.quarter === quarter);
           return (
             <div key={quarter} className="mb-16">

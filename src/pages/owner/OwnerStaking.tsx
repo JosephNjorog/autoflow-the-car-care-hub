@@ -36,7 +36,7 @@ export default function OwnerStaking() {
           </div>
           <div className="space-y-4">
             {[
-              { step: '1', title: 'Stake AVAX', desc: 'Deposit your AVAX earnings from AutoFlow into the Suzaku liquid staking pool.' },
+              { step: '1', title: 'Stake AVAX', desc: 'Deposit your AVAX earnings from AutoPayKe into the Suzaku liquid staking pool.' },
               { step: '2', title: 'Receive sAVAX', desc: 'Get liquid staking tokens (sAVAX) that represent your staked position and accrue rewards.' },
               { step: '3', title: 'Earn Yield', desc: 'Your AVAX earns staking rewards while sAVAX remains liquid and usable in DeFi.' },
               { step: '4', title: 'Unstake Anytime', desc: 'Redeem your sAVAX back to AVAX plus earned rewards at any time.' },

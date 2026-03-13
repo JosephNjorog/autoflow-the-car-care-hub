@@ -438,14 +438,14 @@ export async function sendStaffCredentials(
       <tr><td class="label">💰 Earnings</td><td class="value">Track your earnings over time</td></tr>
     </table>
     <hr class="divider" />
-    <p style="font-size:13px;color:#94a3b8;">Questions? Contact your business owner or reach AutoFlow support at <a href="mailto:${process.env.SMTP_USER}" style="color:${BRAND_COLOR};">${process.env.SMTP_USER}</a></p>
+    <p style="font-size:13px;color:#94a3b8;">Questions? Contact your business owner or reach AutoPayKe support at <a href="mailto:${process.env.SMTP_USER}" style="color:${BRAND_COLOR};">${process.env.SMTP_USER}</a></p>
   `;
 
   await transporter.sendMail({
     from: FROM,
     to: email,
-    subject: 'AutoFlow — Your detailer account is ready',
-    html: emailLayout(content, `${firstName}, your AutoFlow detailer account is live. Here are your login credentials.`),
+    subject: 'AutoPayKe — Your detailer account is ready',
+    html: emailLayout(content, `${firstName}, your AutoPayKe detailer account is live. Here are your login credentials.`),
   });
 }
 

@@ -98,7 +98,7 @@ function PaymentSettingsDialog() {
         <DialogHeader>
           <DialogTitle className="font-display">Payment Settings</DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Configure where AutoFlow sends your 90% earnings after each completed booking.
+            Configure where AutoPayKe sends your 90% earnings after each completed booking.
           </p>
         </DialogHeader>
 
@@ -119,7 +119,7 @@ function PaymentSettingsDialog() {
             <TabsContent value="phone" className="space-y-3 mt-0">
               <div className="p-3 rounded-lg bg-muted/50 text-xs text-muted-foreground flex gap-2">
                 <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                AutoFlow will send your earnings directly to this M-Pesa number via B2C transfer.
+                AutoPayKe will send your earnings directly to this M-Pesa number via B2C transfer.
               </div>
               <div className="space-y-1.5">
                 <Label>M-Pesa Phone Number</Label>

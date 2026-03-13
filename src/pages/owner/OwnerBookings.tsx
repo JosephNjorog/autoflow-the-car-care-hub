@@ -333,6 +333,20 @@ export default function OwnerBookings() {
                   <div className="flex flex-col items-end gap-2 shrink-0">
                     <span className="font-display text-foreground">KES {(b.servicePrice || 0).toLocaleString()}</span>
 
+                    {/* Request Payment — show for confirmed / in-progress when not yet paid */}
+                    {!isPending && !['cancelled','completed'].includes(b.status) && !['captured','released'].includes(b.paymentStatus) && (
+                      <Button
+                        size="sm" variant="outline"
+                        className="gap-1 text-primary border-primary/30 hover:bg-primary/10"
+                        onClick={() => {
+                          setPaymentDialog({ bookingId: b.id, customerName: b.customerName, amount: b.servicePrice, defaultPhone: b.customerPhone });
+                          setPaymentPhone('');
+                        }}
+                      >
+                        <Smartphone className="w-3.5 h-3.5" /> Request Payment
+                      </Button>
+                    )}
+
                     {isPending ? (
                       /* ── Pending: Accept (optionally assign) or Decline ── */
                       <div className="flex gap-2">

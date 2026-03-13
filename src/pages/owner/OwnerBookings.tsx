@@ -219,6 +219,26 @@ export default function OwnerBookings() {
     }
   };
 
+  // Send STK Push to customer's phone (owner-initiated)
+  const handleSendPaymentRequest = async () => {
+    if (!paymentDialog || !paymentPhone) return;
+    setSendingPayment(true);
+    try {
+      const result = await api.post<any>('/payments/request-payment', {
+        bookingId:     paymentDialog.bookingId,
+        customerPhone: paymentPhone,
+      });
+      invalidate();
+      toast({ title: 'STK Push Sent', description: result.message || `M-Pesa request sent to ${paymentPhone}.` });
+      setPaymentDialog(null);
+      setPaymentPhone('');
+    } catch (err) {
+      toast({ title: 'Failed', description: err instanceof Error ? err.message : 'Could not send M-Pesa request', variant: 'destructive' });
+    } finally {
+      setSendingPayment(false);
+    }
+  };
+
   // Assign to an already-accepted booking
   const handleAssignStaff = async () => {
     if (!assignDialogBooking || !selectedStaff) return;

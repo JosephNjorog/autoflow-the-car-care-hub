@@ -104,6 +104,30 @@ const shippedItems = [
     title: 'Admin & Owner Approvals',
     description: 'Admin dashboard with owner approval queue, user management, platform-wide transactions, and booking oversight.',
   },
+  {
+    icon: FileCode2,
+    gradient: 'from-red-500 to-orange-500',
+    glow: 'shadow-red-500/20',
+    category: 'Smart Contract',
+    title: 'AutoFlowPayments Contract',
+    description: 'Solidity 0.8.20 smart contract on Avalanche C-Chain — atomic 90/10 token split with payWithToken and payWithAVAX. Hardhat deploy + SnowTrace verification.',
+  },
+  {
+    icon: SplitSquareVertical,
+    gradient: 'from-green-600 to-teal-600',
+    glow: 'shadow-green-600/20',
+    category: 'Payments',
+    title: 'M-Pesa Escrow + B2C Payout',
+    description: 'STK Push captures full payment into AutoFlow escrow. On customer confirmation, 90% auto-paid to owner via Daraja B2C API. Works for both pay-now and pay-at-pickup.',
+  },
+  {
+    icon: Smartphone,
+    gradient: 'from-blue-500 to-indigo-600',
+    glow: 'shadow-blue-500/20',
+    category: 'Owner Tools',
+    title: 'Owner Payment Settings',
+    description: 'Owners configure M-Pesa payout type (Send Money / Till / Paybill) and link their Avalanche crypto wallet. SnowTrace links on every on-chain transaction.',
+  },
 ];
 
 // ── Upcoming roadmap items ────────────────────────────────────────────────────

@@ -95,7 +95,8 @@ export async function initiateStkPush(
   };
 
   if (data.ResponseCode !== '0') {
-    throw new Error(data.ResponseDescription || 'M-Pesa STK Push failed');
+    console.error('Daraja STK Push rejected:', JSON.stringify(data));
+    throw new Error(`M-Pesa error ${data.ResponseCode}: ${data.ResponseDescription || 'STK Push failed'}`);
   }
 
   return {

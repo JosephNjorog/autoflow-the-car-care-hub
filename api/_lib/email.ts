@@ -356,7 +356,7 @@ export async function sendBookingStatusEmail(
       icon: '🚗',
       box: 'success-box',
       message: data.payAtPickup
-        ? `Your <strong>${data.serviceName}</strong> at <strong>${data.locationName}</strong> is complete and looking great! Please open the AutoFlow app, confirm the service, and complete your payment to release the car.`
+        ? `Your <strong>${data.serviceName}</strong> at <strong>${data.locationName}</strong> is complete and looking great! Please open the AutoPayKe app, confirm the service, and complete your payment to release the car.`
         : `Your <strong>${data.serviceName}</strong> at <strong>${data.locationName}</strong> is complete and looking great! Please check the after-photos in the app and tap <strong>Confirm Pickup</strong> to release payment to the car wash team.`,
       cta: data.payAtPickup ? 'Pay & Confirm Pickup' : 'Confirm Pickup',
       ctaPath: '/customer/bookings',
@@ -402,7 +402,7 @@ export async function sendBookingStatusEmail(
   await transporter.sendMail({
     from: FROM,
     to: email,
-    subject: `AutoFlow — ${cfg.subject}`,
+    subject: `AutoPayKe — ${cfg.subject}`,
     html: emailLayout(content),
   });
 }

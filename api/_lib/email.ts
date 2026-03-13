@@ -87,8 +87,8 @@ function emailLayout(content: string, preheader = ''): string {
     <div class="container">
       <div class="header">
         <div class="logo-mark">🚗</div>
-        <p class="logo-text">AutoFlow</p>
-        <p class="logo-sub">The Car Care Hub · Built on Avalanche</p>
+        <p class="logo-text">AutoPayKe</p>
+        <p class="logo-sub">Car Care Hub Kenya · Built on Avalanche</p>
       </div>
       <div class="body">
         ${content}

@@ -228,7 +228,7 @@ export default function OwnerStaff() {
         {/* ── Offline Team Members Tab ─────────────────────────────────── */}
         <TabsContent value="team">
           <div className="mb-4 p-3 rounded-lg bg-muted/50 border border-border text-sm text-muted-foreground">
-            Add team members here — <strong>no AutoFlow account needed</strong>. Just their name (and optional phone). You assign bookings to them from the Bookings page.
+            Add team members here — <strong>no AutoPayKe account needed</strong>. Just their name (and optional phone). You assign bookings to them from the Bookings page.
           </div>
 
           {loadingOffline ? (

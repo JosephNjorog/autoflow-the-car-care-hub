@@ -192,7 +192,7 @@ export async function sendOwnerPendingEmail(email: string, firstName: string): P
 export async function sendOwnerApprovedEmail(email: string, firstName: string): Promise<void> {
   const content = `
     <h1>You're approved, ${firstName}! 🎉</h1>
-    <p>Great news — your AutoFlow Business Owner account has been <strong>approved</strong>. You can now log in and start setting up your car wash business.</p>
+    <p>Great news — your AutoPayKe Business Owner account has been <strong>approved</strong>. You can now log in and start setting up your car wash business.</p>
     <div class="success-box">
       <p><strong>✅ Account Active</strong><br /><br />Your dashboard is ready. Add your location, set up services, manage your team, and start accepting bookings today.</p>
     </div>

@@ -151,7 +151,8 @@ export default function CustomerBookings() {
         parseFloat(usdAmount),
         { onStep: setCryptoStep },
         'injected',
-        undefined,
+        booking.ownerCryptoWallet ?? undefined,
+        booking.id,
       );
       setCryptoStep('idle');
       await handleConfirmPickup(booking);

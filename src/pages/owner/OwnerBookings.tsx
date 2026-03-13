@@ -479,6 +479,51 @@ export default function OwnerBookings() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ── Request Payment Dialog ─────────────────────────────────────────── */}
+      <Dialog
+        open={!!paymentDialog}
+        onOpenChange={o => { if (!o) { setPaymentDialog(null); setPaymentPhone(''); } }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <Smartphone className="w-5 h-5 text-primary" /> Request M-Pesa Payment
+            </DialogTitle>
+          </DialogHeader>
+          {paymentDialog && (
+            <div className="space-y-4 pt-1">
+              <div className="p-3 rounded-lg bg-muted/50">
+                <p className="text-sm text-foreground font-medium">{paymentDialog.customerName}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Amount: <span className="font-display text-foreground">KES {(paymentDialog.amount || 0).toLocaleString()}</span>
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Customer Phone Number</label>
+                <Input
+                  placeholder="0712 345 678"
+                  value={paymentPhone || paymentDialog.defaultPhone || ''}
+                  onChange={e => setPaymentPhone(e.target.value)}
+                  autoFocus
+                />
+                <p className="text-xs text-muted-foreground">
+                  The customer will receive an M-Pesa STK push and enter their PIN to pay.
+                </p>
+              </div>
+              <Button
+                className="w-full gap-2"
+                disabled={sendingPayment || !paymentPhone}
+                onClick={handleSendPaymentRequest}
+              >
+                {sendingPayment
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>
+                  : <><Smartphone className="w-4 h-4" /> Send STK Push</>}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

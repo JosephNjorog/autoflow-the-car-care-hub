@@ -5,7 +5,7 @@
  *   1. Injected wallet (MetaMask, Core Wallet, Trust Wallet) — window.ethereum
  *   2. WDK in-app wallet (Tether WDK embedded wallet, no extension needed)
  *
- * Both send USDT or USDC on Avalanche C-Chain to the AutoFlow payment wallet.
+ * Both send USDT or USDC on Avalanche C-Chain to the AutoPayKe payment wallet.
  *
  * Set VITE_USE_TESTNET=true in .env.local to use Avalanche Fuji testnet
  * for demo/recording purposes. Fuji faucet: https://faucet.avax.network

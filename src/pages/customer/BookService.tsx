@@ -391,7 +391,7 @@ export default function BookService() {
           {/* ── Payment Timing ──────────────────────────────── */}
           <h3 className="text-sm font-medium text-foreground mb-1">When to pay</h3>
           <p className="text-xs text-muted-foreground mb-3">
-            Funds are held in escrow by AutoFlow and released to the car wash only after you confirm service completion.
+            Funds are held in escrow by AutoPayKe and released to the car wash only after you confirm service completion.
           </p>
           <div className="grid grid-cols-2 gap-2 mb-5">
             {[
@@ -414,7 +414,7 @@ export default function BookService() {
           {/* ── Payment Method ──────────────────────────────── */}
           <h3 className="text-sm font-medium text-foreground mb-1">Pay with</h3>
           <p className="text-xs text-muted-foreground mb-3">
-            A 10% platform fee is included in all prices — this is how AutoFlow stays free for car wash owners.
+            A 10% platform fee is included in all prices — this is how AutoPayKe stays free for car wash owners.
           </p>
           <div className="space-y-2 mb-4">
             {[

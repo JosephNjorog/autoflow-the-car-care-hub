@@ -468,7 +468,7 @@ export async function sendLoyaltyMilestoneEmail(
 
   const content = `
     <h1>You've hit ${milestone} points! 🌟</h1>
-    <p>Hi ${firstName}, congratulations — you've reached a loyalty milestone on AutoFlow!</p>
+    <p>Hi ${firstName}, congratulations — you've reached a loyalty milestone on AutoPayKe!</p>
     <div class="success-box">
       <p><strong>🎁 Your reward: ${reward}</strong><br /><br />This reward has been added to your account and will be automatically applied at checkout on your next eligible booking.</p>
     </div>

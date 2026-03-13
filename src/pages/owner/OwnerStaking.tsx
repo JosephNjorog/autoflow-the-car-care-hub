@@ -19,7 +19,7 @@ export default function OwnerStaking() {
         <div>
           <h3 className="font-display text-foreground mb-1">Coming Soon</h3>
           <p className="text-sm text-muted-foreground">
-            AVAX staking via Suzaku liquid staking is on our roadmap. Once launched, business owners will be able to stake their AVAX earnings directly from AutoFlow and earn passive yield — without locking capital.
+            AVAX staking via Suzaku liquid staking is on our roadmap. Once launched, business owners will be able to stake their AVAX earnings directly from AutoPayKe and earn passive yield — without locking capital.
           </p>
         </div>
       </motion.div>

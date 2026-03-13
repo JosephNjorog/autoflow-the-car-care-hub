@@ -19,7 +19,7 @@ export default function OwnerAIInsights() {
         <div>
           <h3 className="font-display text-foreground mb-1">Coming Soon</h3>
           <p className="text-sm text-muted-foreground">
-            AI-powered business insights via Kite AI are on the roadmap. Once live, the engine will analyse your booking history, revenue data, and customer patterns to surface actionable recommendations — directly inside AutoFlow.
+            AI-powered business insights via Kite AI are on the roadmap. Once live, the engine will analyse your booking history, revenue data, and customer patterns to surface actionable recommendations — directly inside AutoPayKe.
           </p>
         </div>
       </motion.div>

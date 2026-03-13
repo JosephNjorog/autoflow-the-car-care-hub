@@ -118,7 +118,7 @@ export async function sendWelcomeEmail(
   const roleMessages: Record<string, { headline: string; body: string; cta: string; ctaPath: string }> = {
     customer: {
       headline: 'Book your first car wash today',
-      body: `Browse hundreds of car wash locations near you, choose your service, and pay seamlessly with M-Pesa or crypto. Your car deserves the best — and AutoFlow makes it effortless.`,
+      body: `Browse hundreds of car wash locations near you, choose your service, and pay seamlessly with M-Pesa or crypto. Your car deserves the best — and AutoPayKe makes it effortless.`,
       cta: 'Book a Car Wash',
       ctaPath: '/book',
     },

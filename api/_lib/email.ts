@@ -95,12 +95,12 @@ function emailLayout(content: string, preheader = ''): string {
       </div>
       <div class="footer">
         <p>
-          © ${new Date().getFullYear()} AutoFlow — The Car Care Hub<br />
+          © ${new Date().getFullYear()} AutoPayKe — Car Care Hub Kenya<br />
           Nairobi, Kenya &nbsp;·&nbsp;
-          <a href="${APP_URL}">autoflow.app</a> &nbsp;·&nbsp;
+          <a href="${APP_URL}">autopayk.app</a> &nbsp;·&nbsp;
           <a href="${APP_URL}/support">Support</a>
         </p>
-        <p style="margin-top:8px;">You received this email because you have an AutoFlow account. <a href="${APP_URL}/settings">Manage notifications</a></p>
+        <p style="margin-top:8px;">You received this email because you have an AutoPayKe account. <a href="${APP_URL}/settings">Manage notifications</a></p>
       </div>
     </div>
   </div>

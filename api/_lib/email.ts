@@ -213,8 +213,8 @@ export async function sendOwnerApprovedEmail(email: string, firstName: string): 
   await transporter.sendMail({
     from: FROM,
     to: email,
-    subject: 'AutoFlow — Your account has been approved! 🎉',
-    html: emailLayout(content, 'Your AutoFlow business owner account is approved and ready to go.'),
+    subject: 'AutoPayKe — Your account has been approved! 🎉',
+    html: emailLayout(content, 'Your AutoPayKe business owner account is approved and ready to go.'),
   });
 }
 
@@ -223,7 +223,7 @@ export async function sendOwnerApprovedEmail(email: string, firstName: string): 
 export async function sendOwnerRejectedEmail(email: string, firstName: string): Promise<void> {
   const content = `
     <h1>An update on your application</h1>
-    <p>Hi ${firstName}, thank you for your interest in joining AutoFlow as a Business Owner.</p>
+    <p>Hi ${firstName}, thank you for your interest in joining AutoPayKe as a Business Owner.</p>
     <div class="danger-box">
       <p><strong>Application Not Approved</strong><br /><br />After reviewing your application, we were unable to approve your account at this time. This may be due to incomplete documentation or information that couldn't be verified.</p>
     </div>

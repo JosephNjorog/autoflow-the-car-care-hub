@@ -134,7 +134,7 @@ function PaymentSettingsDialog() {
             <TabsContent value="till" className="space-y-3 mt-0">
               <div className="p-3 rounded-lg bg-muted/50 text-xs text-muted-foreground flex gap-2">
                 <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                For Buy Goods (Till) payouts. AutoFlow uses Daraja B2B to send earnings to your till.
+                For Buy Goods (Till) payouts. AutoPayKe uses Daraja B2B to send earnings to your till.
                 Contact Safaricom Business to confirm B2B support for your till.
               </div>
               <div className="space-y-1.5">
@@ -150,7 +150,7 @@ function PaymentSettingsDialog() {
             <TabsContent value="paybill" className="space-y-3 mt-0">
               <div className="p-3 rounded-lg bg-muted/50 text-xs text-muted-foreground flex gap-2">
                 <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                For Paybill payouts. AutoFlow sends earnings to your Paybill business number.
+                For Paybill payouts. AutoPayKe sends earnings to your Paybill business number.
                 Contact Safaricom Business to confirm B2B support for your Paybill.
               </div>
               <div className="space-y-1.5">

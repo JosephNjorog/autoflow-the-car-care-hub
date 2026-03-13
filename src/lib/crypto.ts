@@ -189,7 +189,7 @@ export async function sendCryptoPaymentInjected(
   return (receipt as { hash: string }).hash;
 }
 
-// ─── Injected Wallet: Split payment (10% AutoFlow, 90% owner) ────────────────
+// ─── Injected Wallet: Split payment (10% AutoPayKe, 90% owner) ───────────────
 // Uses the AutoFlowPayments smart contract if VITE_AUTOFLOW_CONTRACT is set,
 // otherwise falls back to two direct transfers.
 

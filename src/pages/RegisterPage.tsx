@@ -117,7 +117,7 @@ export default function RegisterPage() {
       <div className="hidden lg:flex lg:w-1/2 gradient-primary items-center justify-center p-12">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="max-w-md text-center">
           <Droplets className="w-16 h-16 text-primary-foreground/80 mx-auto mb-6" />
-          <h1 className="text-4xl font-display text-primary-foreground mb-4">Join AutoFlow</h1>
+          <h1 className="text-4xl font-display text-primary-foreground mb-4">Join AutoPayKe</h1>
           <p className="text-primary-foreground/60">Create your account and start booking premium car wash services.</p>
         </motion.div>
       </div>
@@ -127,7 +127,7 @@ export default function RegisterPage() {
           <div className="text-center lg:text-left">
             <Link to="/" className="inline-flex items-center gap-2 lg:hidden mb-6">
               <Droplets className="w-7 h-7 text-primary" />
-              <span className="font-display text-xl">AutoFlow</span>
+              <span className="font-display text-xl">AutoPayKe</span>
             </Link>
             <h2 className="text-2xl font-display text-foreground">Create your account</h2>
             <p className="text-sm text-muted-foreground mt-1">Fill in your details to get started</p>

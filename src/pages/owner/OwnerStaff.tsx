@@ -334,7 +334,7 @@ export default function OwnerStaff() {
       <Dialog open={addOpen} onOpenChange={o => { setAddOpen(o); if (!o) setAddForm(emptyOffline); }}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle className="font-display">Add Team Member</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground -mt-1">No AutoFlow account needed — just enter their name.</p>
+          <p className="text-sm text-muted-foreground -mt-1">No AutoPayKe account needed — just enter their name.</p>
           <OfflineStaffFormFields form={addForm} setForm={setAddForm} onSave={handleAdd} saving={saving} saveLabel="Add to Team" />
         </DialogContent>
       </Dialog>

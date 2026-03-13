@@ -2,97 +2,166 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '../_lib/db';
 import { requireAuth } from '../_lib/auth';
 import { handleCors } from '../_lib/cors';
-
-const MPESA_BASE = 'https://sandbox.safaricom.co.ke';
-
-async function getMpesaAccessToken(): Promise<string> {
-  const consumerKey = process.env.MPESA_CONSUMER_KEY!;
-  const consumerSecret = process.env.MPESA_CONSUMER_SECRET!;
-  const credentials = Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64');
-  const res = await fetch(`${MPESA_BASE}/oauth/v1/generate?grant_type=client_credentials`, {
-    headers: { Authorization: `Basic ${credentials}` },
-  });
-  const data = await res.json() as { access_token: string };
-  return data.access_token;
-}
-
-function formatTimestamp(): string {
-  const now = new Date();
-  return now.getFullYear().toString() +
-    String(now.getMonth() + 1).padStart(2, '0') +
-    String(now.getDate()).padStart(2, '0') +
-    String(now.getHours()).padStart(2, '0') +
-    String(now.getMinutes()).padStart(2, '0') +
-    String(now.getSeconds()).padStart(2, '0');
-}
+import {
+  getMpesaAccessToken,
+  formatTimestamp,
+  normalisePhone,
+  initiateStkPush,
+  initiateB2CPayout,
+  MPESA_BASE,
+} from '../_lib/mpesa';
 
 // ── POST /api/payments/mpesa-stk ─────────────────────────────────────────────
+// Customer-triggered STK push (pay-now before service)
 async function handleMpesaStk(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const auth = requireAuth(req, res);
   if (!auth) return;
 
   const { bookingId, phone } = req.body;
-  if (!bookingId || !phone) return res.status(400).json({ error: 'Booking ID and phone number are required' });
+  if (!bookingId || !phone) return res.status(400).json({ error: 'bookingId and phone are required' });
 
   const [booking] = await sql`
     SELECT b.id, b.customer_id, b.payment_status, s.price, s.name as service_name, l.name as location_name
-    FROM bookings b JOIN services s ON s.id = b.service_id JOIN locations l ON l.id = b.location_id
+    FROM bookings b
+    JOIN services s ON s.id = b.service_id
+    JOIN locations l ON l.id = b.location_id
     WHERE b.id = ${bookingId}
   `;
   if (!booking) return res.status(404).json({ error: 'Booking not found' });
-  if (auth.role === 'customer' && booking.customer_id !== auth.userId) return res.status(403).json({ error: 'Not authorized' });
-  if (['completed', 'captured', 'released'].includes(booking.payment_status as string)) return res.status(400).json({ error: 'This booking has already been paid' });
+  if (auth.role === 'customer' && booking.customer_id !== auth.userId) {
+    return res.status(403).json({ error: 'Not authorized' });
+  }
+  if (['captured', 'released'].includes(booking.payment_status as string)) {
+    return res.status(400).json({ error: 'This booking has already been paid' });
+  }
 
-  // Accept optional amount override (includes maintenance fee + logistics)
   const amount = req.body.amount
     ? Math.ceil(parseFloat(req.body.amount))
-    : Math.ceil(parseFloat(booking.price));
-  let mpesaPhone = phone.replace(/\s+/g, '').replace(/^0/, '254').replace(/^\+/, '');
-  if (!mpesaPhone.startsWith('254')) mpesaPhone = '254' + mpesaPhone;
-
-  const shortcode = process.env.MPESA_SHORTCODE!;
-  const passkey = process.env.MPESA_PASSKEY!;
-  const timestamp = formatTimestamp();
-  const password = Buffer.from(`${shortcode}${passkey}${timestamp}`).toString('base64');
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://autoflow.vercel.app';
-  const callbackUrl = `${appUrl}/api/payments/mpesa-callback`;
+    : Math.ceil(parseFloat(booking.price as string));
 
   try {
-    const accessToken = await getMpesaAccessToken();
-    const stkRes = await fetch(`${MPESA_BASE}/mpesa/stkpush/v1/processrequest`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({
-        BusinessShortCode: shortcode, Password: password, Timestamp: timestamp,
-        TransactionType: 'CustomerPayBillOnline', Amount: amount,
-        PartyA: mpesaPhone, PartyB: shortcode, PhoneNumber: mpesaPhone,
-        CallBackURL: callbackUrl,
-        AccountReference: `AUTOFLOW-${bookingId.slice(0, 8).toUpperCase()}`,
-        TransactionDesc: `AutoFlow: ${booking.service_name} at ${booking.location_name}`,
-      }),
-    });
-
-    const stkData = await stkRes.json() as { ResponseCode: string; CheckoutRequestID: string; MerchantRequestID: string; CustomerMessage: string; ResponseDescription: string };
-    if (stkData.ResponseCode !== '0') return res.status(400).json({ error: stkData.ResponseDescription || 'M-Pesa request failed. Please try again.' });
+    const result = await initiateStkPush(
+      normalisePhone(phone as string),
+      amount,
+      bookingId as string,
+      `AutoFlow: ${booking.service_name} at ${booking.location_name}`,
+    );
 
     await sql`
       UPDATE transactions SET
-        mpesa_checkout_request_id = ${stkData.CheckoutRequestID},
-        mpesa_merchant_request_id = ${stkData.MerchantRequestID}
+        mpesa_checkout_request_id = ${result.checkoutRequestId},
+        mpesa_merchant_request_id = ${result.merchantRequestId}
       WHERE booking_id = ${bookingId}
     `;
 
-    return res.status(200).json({ message: 'M-Pesa STK Push sent. Please enter your PIN on your phone.', checkoutRequestId: stkData.CheckoutRequestID, customerMessage: stkData.CustomerMessage });
+    return res.status(200).json({
+      message: 'STK Push sent — please enter your M-Pesa PIN.',
+      checkoutRequestId: result.checkoutRequestId,
+      customerMessage:   result.customerMessage,
+    });
   } catch (err) {
-    console.error('M-Pesa STK error:', err);
-    return res.status(500).json({ error: 'Failed to initiate M-Pesa payment. Please try again.' });
+    console.error('mpesa-stk error:', err);
+    return res.status(500).json({ error: err instanceof Error ? err.message : 'M-Pesa request failed' });
+  }
+}
+
+// ── POST /api/payments/request-payment ───────────────────────────────────────
+// Owner-triggered STK push: owner enters customer phone → customer pays via M-Pesa PIN.
+// This uses AutoFlow's shortcode; the 90% payout to owner happens on escrow release.
+async function handleRequestPayment(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  const auth = requireAuth(req, res);
+  if (!auth) return;
+  if (!['owner', 'admin'].includes(auth.role)) {
+    return res.status(403).json({ error: 'Only business owners can request payments' });
+  }
+
+  const { bookingId, customerPhone } = req.body;
+  if (!bookingId || !customerPhone) {
+    return res.status(400).json({ error: 'bookingId and customerPhone are required' });
+  }
+
+  const [booking] = await sql`
+    SELECT b.id, b.customer_id, b.payment_status, b.payment_timing,
+           s.price, s.name as service_name, s.owner_id,
+           l.name as location_name,
+           c.first_name, c.phone as c_phone
+    FROM bookings b
+    JOIN services s ON s.id = b.service_id
+    JOIN locations l ON l.id = b.location_id
+    JOIN users c ON c.id = b.customer_id
+    WHERE b.id = ${bookingId}
+  `;
+  if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+  // Owners can only request payment for their own services
+  if (auth.role === 'owner' && booking.owner_id !== auth.userId) {
+    return res.status(403).json({ error: 'This booking does not belong to your business' });
+  }
+
+  if (['captured', 'released'].includes(booking.payment_status as string)) {
+    return res.status(400).json({ error: 'Payment has already been captured for this booking' });
+  }
+
+  const amount = Math.ceil(parseFloat(booking.price as string));
+  const phone  = normalisePhone(customerPhone as string);
+
+  // Ensure a transaction row exists
+  await sql`
+    INSERT INTO transactions (booking_id, customer_id, amount, method, status)
+    VALUES (${bookingId}, ${booking.customer_id}, ${booking.price}, 'mpesa', 'pending')
+    ON CONFLICT DO NOTHING
+  `;
+
+  try {
+    const result = await initiateStkPush(
+      phone,
+      amount,
+      bookingId as string,
+      `Payment request: ${booking.service_name} at ${booking.location_name}`,
+    );
+
+    await sql`
+      UPDATE transactions SET
+        mpesa_checkout_request_id = ${result.checkoutRequestId},
+        mpesa_merchant_request_id = ${result.merchantRequestId}
+      WHERE booking_id = ${bookingId} AND status = 'pending'
+    `;
+
+    // Notify customer
+    await sql`
+      INSERT INTO notifications (user_id, title, message, type)
+      VALUES (${booking.customer_id}, 'Payment Request 💳',
+        ${'Your service provider has sent you an M-Pesa payment request of KES ' + amount + ' for ' + booking.service_name + '. Check your phone and enter your PIN.'},
+        'payment')
+    `;
+
+    return res.status(200).json({
+      message: `STK Push sent to ${phone}. Customer should see it within seconds.`,
+      checkoutRequestId: result.checkoutRequestId,
+      customerMessage:   result.customerMessage,
+      amount,
+    });
+  } catch (err) {
+    console.error('request-payment error:', err);
+    return res.status(500).json({ error: err instanceof Error ? err.message : 'M-Pesa request failed' });
   }
 }
 
 // ── POST /api/payments/mpesa-callback ─────────────────────────────────────────
 interface MpesaCallbackItem { Name: string; Value: string | number; }
-interface MpesaCallback { Body: { stkCallback: { MerchantRequestID: string; CheckoutRequestID: string; ResultCode: number; ResultDesc: string; CallbackMetadata?: { Item: MpesaCallbackItem[] } } } }
+interface MpesaCallback {
+  Body: {
+    stkCallback: {
+      MerchantRequestID: string;
+      CheckoutRequestID: string;
+      ResultCode: number;
+      ResultDesc: string;
+      CallbackMetadata?: { Item: MpesaCallbackItem[] };
+    };
+  };
+}
 
 async function handleMpesaCallback(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -102,27 +171,59 @@ async function handleMpesaCallback(req: VercelRequest, res: VercelResponse) {
     if (!stkCallback) return res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });
 
     const { CheckoutRequestID, ResultCode, ResultDesc, CallbackMetadata } = stkCallback;
+
     const [transaction] = await sql`
-      SELECT t.*, b.customer_id FROM transactions t JOIN bookings b ON b.id = t.booking_id
+      SELECT t.*, b.customer_id, s.owner_id, s.price
+      FROM transactions t
+      JOIN bookings b ON b.id = t.booking_id
+      JOIN services s ON s.id = b.service_id
       WHERE t.mpesa_checkout_request_id = ${CheckoutRequestID}
     `;
     if (!transaction) return res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });
 
     if (ResultCode === 0) {
-      const items = CallbackMetadata?.Item || [];
+      const items   = CallbackMetadata?.Item || [];
       const getItem = (name: string) => items.find((i: MpesaCallbackItem) => i.Name === name)?.Value;
-      const mpesaReceiptNumber = getItem('MpesaReceiptNumber') as string;
-      const amount = getItem('Amount') as number;
+      const mpesaCode = getItem('MpesaReceiptNumber') as string;
+      const amount    = getItem('Amount') as number;
 
-      // Escrow: funds captured by AutoFlow — not yet released to owner
-      await sql`UPDATE transactions SET status = 'captured', mpesa_code = ${mpesaReceiptNumber || null}, amount = ${amount || transaction.amount} WHERE mpesa_checkout_request_id = ${CheckoutRequestID}`;
-      await sql`UPDATE bookings SET payment_status = 'captured', status = CASE WHEN status = 'pending' THEN 'confirmed' ELSE status END WHERE id = ${transaction.booking_id}`;
+      await sql`
+        UPDATE transactions
+        SET status = 'captured', mpesa_code = ${mpesaCode || null}, amount = COALESCE(${amount || null}, amount)
+        WHERE mpesa_checkout_request_id = ${CheckoutRequestID}
+      `;
+      await sql`
+        UPDATE bookings
+        SET payment_status = 'captured',
+            status = CASE WHEN status = 'pending' THEN 'confirmed' ELSE status END
+        WHERE id = ${transaction.booking_id}
+      `;
 
-      await sql`INSERT INTO notifications (user_id, title, message, type) VALUES (${transaction.customer_id}, 'Payment Captured ✓', ${'KES ' + (amount || transaction.amount) + ' received via M-Pesa (Code: ' + (mpesaReceiptNumber || 'N/A') + '). Funds held in escrow until you confirm service completion.'}, 'payment')`;
-      await sql`INSERT INTO notifications (user_id, title, message, type) SELECT s.owner_id, 'Booking Paid (Escrow)', ${'M-Pesa payment of KES ' + (amount || transaction.amount) + ' captured. Funds release when customer confirms pickup.'}, 'payment' FROM bookings b JOIN services s ON s.id = b.service_id WHERE b.id = ${transaction.booking_id}`;
+      const paid = amount || parseFloat(transaction.amount as string);
+      await sql`
+        INSERT INTO notifications (user_id, title, message, type)
+        VALUES (${transaction.customer_id},
+          'Payment Received ✓',
+          ${'KES ' + paid + ' received via M-Pesa' + (mpesaCode ? ' (Code: ' + mpesaCode + ')' : '') + '. Funds held in escrow until you confirm service completion.'},
+          'payment')
+      `;
+      await sql`
+        INSERT INTO notifications (user_id, title, message, type)
+        SELECT s.owner_id,
+          'Payment Captured (Escrow)',
+          ${'KES ' + paid + ' M-Pesa payment captured for booking. Funds released when customer confirms service completion.'},
+          'payment'
+        FROM bookings b JOIN services s ON s.id = b.service_id
+        WHERE b.id = ${transaction.booking_id}
+      `;
     } else {
       await sql`UPDATE transactions SET status = 'failed' WHERE mpesa_checkout_request_id = ${CheckoutRequestID}`;
-      await sql`INSERT INTO notifications (user_id, title, message, type) VALUES (${transaction.customer_id}, 'Payment Failed', ${'M-Pesa payment failed: ' + ResultDesc + '. Please try again.'}, 'payment')`;
+      await sql`
+        INSERT INTO notifications (user_id, title, message, type)
+        VALUES (${transaction.customer_id}, 'Payment Failed',
+          ${'M-Pesa payment failed: ' + ResultDesc + '. Please try again.'},
+          'payment')
+      `;
     }
 
     return res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });
@@ -138,15 +239,22 @@ async function handleStatus(req: VercelRequest, res: VercelResponse) {
   const auth = requireAuth(req, res);
   if (!auth) return;
   const { bookingId } = req.query;
-  if (!bookingId) return res.status(400).json({ error: 'Booking ID required' });
+  if (!bookingId) return res.status(400).json({ error: 'bookingId required' });
 
-  const [transaction] = await sql`
+  const [t] = await sql`
     SELECT t.status, t.mpesa_code, t.amount, b.payment_status, b.status as booking_status
     FROM transactions t JOIN bookings b ON b.id = t.booking_id
-    WHERE t.booking_id = ${bookingId as string} ORDER BY t.created_at DESC LIMIT 1
+    WHERE t.booking_id = ${bookingId as string}
+    ORDER BY t.created_at DESC LIMIT 1
   `;
-  if (!transaction) return res.status(404).json({ error: 'Transaction not found' });
-  return res.status(200).json({ paymentStatus: transaction.payment_status, transactionStatus: transaction.status, mpesaCode: transaction.mpesa_code, amount: parseFloat(transaction.amount), bookingStatus: transaction.booking_status });
+  if (!t) return res.status(404).json({ error: 'Transaction not found' });
+  return res.status(200).json({
+    paymentStatus:    t.payment_status,
+    transactionStatus: t.status,
+    mpesaCode:        t.mpesa_code,
+    amount:           parseFloat(t.amount as string),
+    bookingStatus:    t.booking_status,
+  });
 }
 
 // ── GET /api/payments/transactions ───────────────────────────────────────────
@@ -156,69 +264,61 @@ async function handleTransactions(req: VercelRequest, res: VercelResponse) {
   if (!auth) return;
 
   let transactions;
+  const BASE = `
+    SELECT t.*, c.first_name || ' ' || c.last_name as customer_name, s.name as service_name
+    FROM transactions t
+    JOIN users c ON c.id = t.customer_id
+    LEFT JOIN bookings b ON b.id = t.booking_id
+    LEFT JOIN services s ON s.id = b.service_id
+  `;
+
   if (auth.role === 'customer') {
-    transactions = await sql`
-      SELECT t.*, c.first_name || ' ' || c.last_name as customer_name, s.name as service_name
-      FROM transactions t JOIN users c ON c.id = t.customer_id LEFT JOIN bookings b ON b.id = t.booking_id LEFT JOIN services s ON s.id = b.service_id
-      WHERE t.customer_id = ${auth.userId} ORDER BY t.created_at DESC
-    `;
+    transactions = await sql`${sql.unsafe(BASE)} WHERE t.customer_id = ${auth.userId} ORDER BY t.created_at DESC`;
   } else if (auth.role === 'owner') {
-    transactions = await sql`
-      SELECT t.*, c.first_name || ' ' || c.last_name as customer_name, s.name as service_name
-      FROM transactions t JOIN users c ON c.id = t.customer_id LEFT JOIN bookings b ON b.id = t.booking_id LEFT JOIN services s ON s.id = b.service_id
-      WHERE s.owner_id = ${auth.userId} ORDER BY t.created_at DESC
-    `;
+    transactions = await sql`${sql.unsafe(BASE)} WHERE s.owner_id = ${auth.userId} ORDER BY t.created_at DESC`;
   } else if (auth.role === 'admin') {
-    transactions = await sql`
-      SELECT t.*, c.first_name || ' ' || c.last_name as customer_name, s.name as service_name
-      FROM transactions t JOIN users c ON c.id = t.customer_id LEFT JOIN bookings b ON b.id = t.booking_id LEFT JOIN services s ON s.id = b.service_id
-      ORDER BY t.created_at DESC LIMIT 1000
-    `;
+    transactions = await sql`${sql.unsafe(BASE)} ORDER BY t.created_at DESC LIMIT 1000`;
   } else {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  return res.status(200).json(transactions.map(t => ({
-    id: t.id, bookingId: t.booking_id, customerId: t.customer_id, customerName: t.customer_name,
-    serviceName: t.service_name, amount: parseFloat(t.amount), method: t.method, status: t.status,
-    mpesaCode: t.mpesa_code, cryptoTxHash: t.crypto_tx_hash, cryptoToken: t.crypto_token,
-    cryptoNetwork: t.crypto_network, date: t.created_at, createdAt: t.created_at,
-  })));
+  return res.status(200).json(
+    transactions.map(t => ({
+      id: t.id, bookingId: t.booking_id, customerId: t.customer_id,
+      customerName: t.customer_name, serviceName: t.service_name,
+      amount: parseFloat(t.amount as string), method: t.method, status: t.status,
+      mpesaCode: t.mpesa_code, cryptoTxHash: t.crypto_tx_hash,
+      cryptoToken: t.crypto_token, cryptoNetwork: t.crypto_network,
+      date: t.created_at, createdAt: t.created_at,
+    })),
+  );
 }
 
 // ── POST /api/payments/mpesa-stk-pickup ──────────────────────────────────────
-// Initiates M-Pesa STK Push for pay-at-pickup bookings (status = awaiting_confirmation)
 async function handleMpesaStkPickup(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const auth = requireAuth(req, res);
-  if (!auth || auth.role !== 'customer') return;
+  if (!auth || auth.role !== 'customer') {
+    return res.status(403).json({ error: 'Only customers can initiate pickup payment' });
+  }
 
   const { bookingId, phone } = req.body;
-  if (!bookingId || !phone) return res.status(400).json({ error: 'Booking ID and phone number are required' });
+  if (!bookingId || !phone) return res.status(400).json({ error: 'bookingId and phone are required' });
 
   const [booking] = await sql`
-    SELECT b.id, b.customer_id, b.payment_status, b.payment_timing, b.status, s.price, s.name as service_name, l.name as location_name
-    FROM bookings b JOIN services s ON s.id = b.service_id JOIN locations l ON l.id = b.location_id
+    SELECT b.id, b.customer_id, b.payment_status, b.payment_timing, b.status,
+           s.price, s.name as service_name, l.name as location_name
+    FROM bookings b
+    JOIN services s ON s.id = b.service_id
+    JOIN locations l ON l.id = b.location_id
     WHERE b.id = ${bookingId}
   `;
   if (!booking) return res.status(404).json({ error: 'Booking not found' });
   if (booking.customer_id !== auth.userId) return res.status(403).json({ error: 'Not authorized' });
-  if (booking.payment_timing !== 'pickup') return res.status(400).json({ error: 'This booking is not a pay-at-pickup booking' });
+  if (booking.payment_timing !== 'pickup') return res.status(400).json({ error: 'Not a pay-at-pickup booking' });
   if (booking.status !== 'awaiting_confirmation') return res.status(400).json({ error: 'Service must be complete before payment' });
-  if (['completed', 'captured', 'released'].includes(booking.payment_status as string)) return res.status(400).json({ error: 'This booking has already been paid' });
+  if (['captured', 'released'].includes(booking.payment_status as string)) return res.status(400).json({ error: 'Already paid' });
 
-  const amount = Math.ceil(parseFloat(booking.price));
-  let mpesaPhone = phone.replace(/\s+/g, '').replace(/^0/, '254').replace(/^\+/, '');
-  if (!mpesaPhone.startsWith('254')) mpesaPhone = '254' + mpesaPhone;
-
-  const shortcode = process.env.MPESA_SHORTCODE!;
-  const passkey = process.env.MPESA_PASSKEY!;
-  const timestamp = formatTimestamp();
-  const password = Buffer.from(`${shortcode}${passkey}${timestamp}`).toString('base64');
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://autoflow.vercel.app';
-  const callbackUrl = `${appUrl}/api/payments/mpesa-callback`;
-
-  // Ensure transaction row exists
   await sql`
     INSERT INTO transactions (booking_id, customer_id, amount, method, status)
     VALUES (${bookingId}, ${auth.userId}, ${booking.price}, 'mpesa', 'pending')
@@ -226,37 +326,32 @@ async function handleMpesaStkPickup(req: VercelRequest, res: VercelResponse) {
   `;
 
   try {
-    const accessToken = await getMpesaAccessToken();
-    const stkRes = await fetch(`${MPESA_BASE}/mpesa/stkpush/v1/processrequest`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({
-        BusinessShortCode: shortcode, Password: password, Timestamp: timestamp,
-        TransactionType: 'CustomerPayBillOnline', Amount: amount,
-        PartyA: mpesaPhone, PartyB: shortcode, PhoneNumber: mpesaPhone,
-        CallBackURL: callbackUrl,
-        AccountReference: `AUTOFLOW-${bookingId.slice(0, 8).toUpperCase()}`,
-        TransactionDesc: `AutoFlow Pickup: ${booking.service_name} at ${booking.location_name}`,
-      }),
-    });
-    const stkData = await stkRes.json() as { ResponseCode: string; CheckoutRequestID: string; MerchantRequestID: string; CustomerMessage: string; ResponseDescription: string };
-    if (stkData.ResponseCode !== '0') return res.status(400).json({ error: stkData.ResponseDescription || 'M-Pesa request failed. Please try again.' });
+    const result = await initiateStkPush(
+      normalisePhone(phone as string),
+      Math.ceil(parseFloat(booking.price as string)),
+      bookingId as string,
+      `AutoFlow Pickup: ${booking.service_name} at ${booking.location_name}`,
+    );
 
     await sql`
       UPDATE transactions SET
-        mpesa_checkout_request_id = ${stkData.CheckoutRequestID},
-        mpesa_merchant_request_id = ${stkData.MerchantRequestID}
+        mpesa_checkout_request_id = ${result.checkoutRequestId},
+        mpesa_merchant_request_id = ${result.merchantRequestId}
       WHERE booking_id = ${bookingId} AND status = 'pending'
     `;
-    return res.status(200).json({ message: 'M-Pesa STK Push sent. Please enter your PIN.', checkoutRequestId: stkData.CheckoutRequestID, customerMessage: stkData.CustomerMessage });
+
+    return res.status(200).json({
+      message: 'STK Push sent — enter your M-Pesa PIN.',
+      checkoutRequestId: result.checkoutRequestId,
+      customerMessage:   result.customerMessage,
+    });
   } catch (err) {
-    console.error('M-Pesa STK Pickup error:', err);
-    return res.status(500).json({ error: 'Failed to initiate M-Pesa payment. Please try again.' });
+    console.error('mpesa-stk-pickup error:', err);
+    return res.status(500).json({ error: err instanceof Error ? err.message : 'M-Pesa request failed' });
   }
 }
 
 // ── POST /api/payments/flutterwave-verify ─────────────────────────────────────
-// Called by frontend after Flutterwave inline checkout completes
 async function handleFlutterwaveVerify(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const auth = requireAuth(req, res);
@@ -265,38 +360,36 @@ async function handleFlutterwaveVerify(req: VercelRequest, res: VercelResponse) 
   const { transactionId, bookingId } = req.body;
   if (!transactionId || !bookingId) return res.status(400).json({ error: 'transactionId and bookingId are required' });
 
-  const [booking] = await sql`SELECT b.id, b.customer_id, b.payment_status, s.price FROM bookings b JOIN services s ON s.id = b.service_id WHERE b.id = ${bookingId}`;
+  const [booking] = await sql`
+    SELECT b.id, b.customer_id, b.payment_status, s.price
+    FROM bookings b JOIN services s ON s.id = b.service_id
+    WHERE b.id = ${bookingId}
+  `;
   if (!booking) return res.status(404).json({ error: 'Booking not found' });
   if (auth.role === 'customer' && booking.customer_id !== auth.userId) return res.status(403).json({ error: 'Not authorized' });
-  if (['completed', 'captured', 'released'].includes(booking.payment_status as string)) return res.status(400).json({ error: 'Already paid' });
+  if (['captured', 'released'].includes(booking.payment_status as string)) return res.status(400).json({ error: 'Already paid' });
 
   try {
-    // Verify with Flutterwave
     const fwRes = await fetch(`https://api.flutterwave.com/v3/transactions/${transactionId}/verify`, {
       headers: { Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}` },
     });
-    const fwData = await fwRes.json() as { status: string; data?: { status: string; amount: number; currency: string } };
-
+    const fwData = await fwRes.json() as { status: string; data?: { status: string; amount: number } };
     if (fwData.status !== 'success' || fwData.data?.status !== 'successful') {
       return res.status(400).json({ error: 'Flutterwave payment not successful' });
     }
 
     const amount = fwData.data!.amount;
-
-    // Mark as captured (escrow)
+    await sql`UPDATE transactions SET status = 'captured', amount = ${amount} WHERE booking_id = ${bookingId}`;
     await sql`
-      UPDATE transactions SET status = 'captured', amount = ${amount}
-      WHERE booking_id = ${bookingId}
-    `;
-    await sql`
-      UPDATE bookings SET payment_status = 'captured', payment_method = 'card',
-        status = CASE WHEN status = 'pending' THEN 'confirmed' ELSE status END
+      UPDATE bookings
+      SET payment_status = 'captured', payment_method = 'card',
+          status = CASE WHEN status = 'pending' THEN 'confirmed' ELSE status END
       WHERE id = ${bookingId}
     `;
     await sql`
       INSERT INTO notifications (user_id, title, message, type)
       VALUES (${booking.customer_id}, 'Payment Captured ✓',
-        ${'KES ' + amount + ' received via card. Funds held in escrow until you confirm service completion.'},
+        ${'KES ' + amount + ' card payment received. Held in escrow until you confirm service.'},
         'payment')
     `;
     return res.status(200).json({ success: true, amount });
@@ -306,16 +399,14 @@ async function handleFlutterwaveVerify(req: VercelRequest, res: VercelResponse) 
   }
 }
 
-// ── POST /api/payments/b2c-result ─────────────────────────────────────────────
-// Safaricom B2C result callback (owner payout result)
+// ── B2C callbacks ─────────────────────────────────────────────────────────────
 async function handleB2cResult(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   try {
     const result = req.body?.Result;
-    if (result?.ResultCode === '0') {
-      console.log('B2C payout succeeded:', result?.TransactionID);
+    if (result?.ResultCode === '0' || result?.ResultCode === 0) {
+      console.log('B2C payout succeeded:', result?.TransactionID, '| Conversation:', result?.ConversationID);
     } else {
-      console.error('B2C payout failed:', result?.ResultDesc);
+      console.error('B2C payout failed:', result?.ResultDesc, '| Conversation:', result?.ConversationID);
     }
   } catch (err) {
     console.error('B2C result error:', err);
@@ -323,8 +414,6 @@ async function handleB2cResult(req: VercelRequest, res: VercelResponse) {
   return res.status(200).json({ ResultCode: '00000000', ResultDesc: 'Accepted' });
 }
 
-// ── POST /api/payments/b2c-timeout ────────────────────────────────────────────
-// Safaricom B2C timeout callback
 async function handleB2cTimeout(req: VercelRequest, res: VercelResponse) {
   console.error('B2C timeout:', req.body);
   return res.status(200).json({ ResultCode: '00000000', ResultDesc: 'Accepted' });
@@ -334,10 +423,11 @@ async function handleB2cTimeout(req: VercelRequest, res: VercelResponse) {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
   const urlPath = (req.url ?? '').split('?')[0];
-  const slug = urlPath.replace(/^\/api\/[^/]+\/?/, '').split('/').filter(Boolean);
-  const route = slug.join('/');
+  const slug    = urlPath.replace(/^\/api\/[^/]+\/?/, '').split('/').filter(Boolean);
+  const route   = slug.join('/');
 
   if (route === 'mpesa-stk')           return handleMpesaStk(req, res);
+  if (route === 'request-payment')     return handleRequestPayment(req, res);
   if (route === 'mpesa-stk-pickup')    return handleMpesaStkPickup(req, res);
   if (route === 'mpesa-callback')      return handleMpesaCallback(req, res);
   if (route === 'status')              return handleStatus(req, res);

@@ -310,7 +310,7 @@ const roadmapItems = [
     glow: 'shadow-cyan-500/25',
     status: 'planned' as const,
     title: 'Multi-Country Expansion',
-    description: 'AutoFlow goes beyond Kenya. Uganda, Tanzania, Rwanda, Nigeria — with local payment methods and multi-currency pricing.',
+    description: 'AutoPayKe goes beyond Kenya. Uganda, Tanzania, Rwanda, Nigeria — with local payment methods and multi-currency pricing.',
     features: [
       'Uganda, Tanzania, Rwanda, Nigeria launch',
       'MTN Mobile Money & Airtel Money integration',
@@ -350,7 +350,7 @@ export default function RoadmapPage() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center">
               <Layers className="w-4 h-4 text-white" />
             </div>
-            <span className="font-bold text-lg tracking-tight">AutoFlow</span>
+            <span className="font-bold text-lg tracking-tight">AutoPayKe</span>
           </div>
           <Link
             to="/"

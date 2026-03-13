@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { List, CalendarDays, ChevronLeft, ChevronRight, CheckCircle, XCircle, UserCog, Loader2, Bell } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { List, CalendarDays, ChevronLeft, ChevronRight, CheckCircle, XCircle, UserCog, Loader2, Bell, Smartphone } from 'lucide-react';
 import { api } from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -119,6 +120,9 @@ export default function OwnerBookings() {
   const [assignDialogBooking, setAssignDialogBooking] = useState<any>(null);
   const [selectedStaff, setSelectedStaff] = useState('');
   const [actioning, setActioning] = useState<string | null>(null);
+  const [paymentDialog, setPaymentDialog] = useState<{ bookingId: string; customerName: string; amount: number; defaultPhone?: string } | null>(null);
+  const [paymentPhone, setPaymentPhone] = useState('');
+  const [sendingPayment, setSendingPayment] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 

@@ -58,7 +58,7 @@ const testimonials = [
     name: 'Brian Ochieng',
     role: 'Car Wash Owner, Westlands',
     avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
-    quote: 'AutoFlow handles my scheduling, payments, and staff tracking. My revenue is up 40% since I joined. The M-Pesa payouts are instant.',
+    quote: 'AutoPayKe handles my scheduling, payments, and staff tracking. My revenue is up 40% since I joined. The M-Pesa payouts are instant.',
     stars: 5,
   },
   {
@@ -371,7 +371,7 @@ export default function LandingPage() {
           <div className="text-center mb-14">
             <p className="text-xs text-primary uppercase tracking-widest font-medium mb-2">Real People, Real Results</p>
             <h2 className="text-3xl md:text-4xl font-display text-foreground mb-4">What our community says</h2>
-            <p className="text-muted-foreground max-w-md mx-auto">From customers to car wash owners to detailers — here's how AutoFlow is changing how Kenya cares for its cars.</p>
+            <p className="text-muted-foreground max-w-md mx-auto">From customers to car wash owners to detailers — here's how AutoPayKe is changing how Kenya cares for its cars.</p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {testimonials.map((t, i) => (

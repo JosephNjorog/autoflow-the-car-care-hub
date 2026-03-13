@@ -38,7 +38,7 @@ const shippedItems = [
     glow: 'shadow-amber-500/20',
     category: 'Web3 Payments',
     title: 'USDT / USDC on Avalanche',
-    description: 'ERC-20 token payments via injected wallets (Core, MetaMask, Trust). Dual-transfer splits 10% to AutoFlow, 90% to owner.',
+    description: 'ERC-20 token payments via injected wallets (Core, MetaMask, Trust). Dual-transfer splits 10% to AutoPayKe, 90% to owner.',
   },
   {
     icon: Wallet,
@@ -118,7 +118,7 @@ const shippedItems = [
     glow: 'shadow-green-600/20',
     category: 'Payments',
     title: 'M-Pesa Escrow + B2C Payout',
-    description: 'STK Push captures full payment into AutoFlow escrow. On customer confirmation, 90% auto-paid to owner via Daraja B2C API. Works for both pay-now and pay-at-pickup.',
+    description: 'STK Push captures full payment into AutoPayKe escrow. On customer confirmation, 90% auto-paid to owner via Daraja B2C API. Works for both pay-now and pay-at-pickup.',
   },
   {
     icon: Smartphone,

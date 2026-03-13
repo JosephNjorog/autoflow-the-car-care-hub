@@ -183,7 +183,7 @@ export default function CustomerWallet() {
             <div className="flex gap-1 p-1 rounded-xl bg-muted mb-6 w-fit">
               <button onClick={() => setWalletTab('wdk')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${walletTab === 'wdk' ? 'bg-card text-foreground shadow-card' : 'text-muted-foreground hover:text-foreground'}`}>
-                AutoFlow Wallet <span className="text-[10px] ml-1 text-primary font-semibold">WDK</span>
+                AutoPayKe Wallet <span className="text-[10px] ml-1 text-primary font-semibold">WDK</span>
               </button>
               <button onClick={() => setWalletTab('injected')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${walletTab === 'injected' ? 'bg-card text-foreground shadow-card' : 'text-muted-foreground hover:text-foreground'}`}>
@@ -203,7 +203,7 @@ export default function CustomerWallet() {
                       <div className="p-3 rounded-lg bg-primary/10"><Wallet className="w-5 h-5 text-primary" /></div>
                       <div>
                         <p className="font-display text-foreground flex items-center gap-2">
-                          AutoFlow Wallet
+                          AutoPayKe Wallet
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold">Tether WDK</span>
                         </p>
                         <p className="text-xs text-muted-foreground">Self-custodial • Avalanche C-Chain</p>

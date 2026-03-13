@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import {
   Brain, Coins, Zap, Shield, BarChart3, Globe, CheckCircle, Clock, Sparkles,
   ArrowLeft, Layers, ChevronRight, Lock, CreditCard, Video, Wallet, Key,
-  MapPin, Star, Bell, Users, Camera, TrendingUp, ShieldCheck,
+  MapPin, Star, Bell, Users, Camera, TrendingUp, ShieldCheck, FileCode2, Smartphone, SplitSquareVertical,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 

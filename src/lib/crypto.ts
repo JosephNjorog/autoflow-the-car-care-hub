@@ -58,7 +58,25 @@ const ERC20_ABI = [
   'function balanceOf(address owner) view returns (uint256)',
   'function decimals() view returns (uint8)',
   'function symbol() view returns (string)',
+  'function approve(address spender, uint256 amount) returns (bool)',
+  'function allowance(address owner, address spender) view returns (uint256)',
 ];
+
+// AutoFlowPayments smart contract — deployed on Avalanche C-Chain
+// Set VITE_AUTOFLOW_CONTRACT in env vars after deploying contracts/AutoFlowPayments.sol
+const AUTOFLOW_CONTRACT_ADDRESS = import.meta.env.VITE_AUTOFLOW_CONTRACT as string | undefined;
+
+const AUTOFLOW_CONTRACT_ABI = [
+  'function payWithToken(string calldata bookingId, address businessWallet, address tokenAddress, uint256 amount) external',
+  'function payWithAVAX(string calldata bookingId, address businessWallet) external payable',
+  'function previewSplit(uint256 amount) external view returns (uint256 businessAmount, uint256 platformFee)',
+];
+
+/** SnowTrace explorer base URL for the current network */
+export function snowtraceUrl(txHash: string): string {
+  const base = USE_TESTNET ? 'https://testnet.snowtrace.io/tx/' : 'https://snowtrace.io/tx/';
+  return base + txHash;
+}
 
 // ─── Type Declaration for window.ethereum ────────────────────────────────────
 

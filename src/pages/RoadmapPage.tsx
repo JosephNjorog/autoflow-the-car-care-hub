@@ -191,7 +191,7 @@ const roadmapItems = [
     glow: 'shadow-purple-500/25',
     status: 'in-progress' as const,
     title: 'Advanced Business Intelligence',
-    description: 'Deep analytics for owners and the AutoFlow network. Customer lifetime value, cohort analysis, location benchmarking, and detailer performance scoring.',
+    description: 'Deep analytics for owners and the AutoPayKe network. Customer lifetime value, cohort analysis, location benchmarking, and detailer performance scoring.',
     features: [
       'Customer LTV and cohort analysis',
       'Location vs. network benchmarking',
@@ -242,7 +242,7 @@ const roadmapItems = [
     glow: 'shadow-red-500/25',
     status: 'planned' as const,
     title: 'Suzaku AVAX Liquid Staking',
-    description: 'Put your AutoFlow revenue to work. Stake AVAX through Suzaku Protocol directly from the platform and earn yields while your money waits.',
+    description: 'Put your AutoPayKe revenue to work. Stake AVAX through Suzaku Protocol directly from the platform and earn yields while your money waits.',
     features: [
       'One-click AVAX staking via Suzaku Protocol',
       'Liquid staking tokens (sAVAX) for instant liquidity',

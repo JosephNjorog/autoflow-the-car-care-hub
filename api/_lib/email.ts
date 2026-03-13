@@ -13,7 +13,7 @@ const transporter = nodemailer.createTransport({
   socketTimeout: 10000, // fail fast if Brevo is unreachable
 });
 
-const FROM = `"AutoFlow" <${process.env.SMTP_USER}>`;
+const FROM = `"AutoPayKe" <${process.env.SMTP_USER}>`;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://autoflow.vercel.app';
 const BRAND_COLOR = '#0ea5e9'; // sky-500
 const BRAND_DARK = '#0284c7';  // sky-600
@@ -27,7 +27,7 @@ function emailLayout(content: string, preheader = ''): string {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>AutoFlow</title>
+  <title>AutoPayKe</title>
   <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
   <style>
     body { margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }

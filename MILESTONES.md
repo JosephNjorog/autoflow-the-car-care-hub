@@ -1,502 +1,423 @@
-# AutoFlow — Milestones & Roadmap
+# AutoFlow — Milestones & Implementation Docs
 
-> **AutoFlow — The Car Care Hub** is a full-stack, multi-role SaaS platform enabling car wash businesses in Kenya to accept M-Pesa and Avalanche-based crypto payments. Built with React 18, Vercel Serverless Functions, and Neon PostgreSQL.
-
----
-
-## Table of Contents
-
-1. [Tech Stack](#tech-stack)
-2. [Milestones Achieved](#milestones-achieved)
-   - [M1 · Core Platform & Authentication](#m1--core-platform--authentication)
-   - [M2 · Booking System & Escrow Logic](#m2--booking-system--escrow-logic)
-   - [M3 · M-Pesa Payment Integration](#m3--m-pesa-payment-integration)
-   - [M4 · Crypto Payments on Avalanche](#m4--crypto-payments-on-avalanche)
-   - [M5 · Tether WDK Embedded Wallet](#m5--tether-wdk-embedded-wallet)
-   - [M6 · Chainlink On-Chain Price Feeds](#m6--chainlink-on-chain-price-feeds)
-   - [M7 · Owner Business Management](#m7--owner-business-management)
-   - [M8 · Detailer Workflow & Earnings](#m8--detailer-workflow--earnings)
-   - [M9 · Customer Experience Layer](#m9--customer-experience-layer)
-   - [M10 · Loyalty Points System](#m10--loyalty-points-system)
-   - [M11 · Admin & Approvals System](#m11--admin--approvals-system)
-   - [M12 · Email Notification System](#m12--email-notification-system)
-   - [M13 · Analytics Dashboard](#m13--analytics-dashboard)
-   - [M14 · Google OAuth](#m14--google-oauth)
-   - [M15 · Staff Management (Offline + Online)](#m15--staff-management-offline--online)
-   - [M16 · Photo Documentation (Before/After)](#m16--photo-documentation-beforeafter)
-3. [Architecture Highlights](#architecture-highlights)
-4. [Database Schema Summary](#database-schema-summary)
-5. [Roadmap](#roadmap)
+> **Stack:** Vite + React 18 + TypeScript · Vercel Serverless Functions · Neon PostgreSQL · Avalanche C-Chain
 
 ---
 
-## Tech Stack
+## Shipped Milestones (Q1 2026)
 
-| Layer | Technology | Version |
-|-------|-----------|---------|
-| Frontend Framework | React | 18.3.1 |
-| Language | TypeScript | 5.8.3 |
-| Build Tool | Vite | 5.4.19 |
-| Routing | React Router DOM | 6.30.1 |
-| State / Data Fetching | TanStack React Query | 5.83.0 |
-| UI Components | shadcn/ui + Radix UI | latest |
-| Styling | Tailwind CSS | 3.4.17 |
-| Animations | Framer Motion | 12.34.3 |
-| Forms | React Hook Form | 7.61.1 |
-| Charts | Recharts | 2.15.4 |
-| Wallet SDK | @tetherto/wdk + wdk-wallet-evm | 1.0.0-beta |
-| Blockchain Library | ethers.js | 6.16.0 |
-| Backend | Vercel Serverless Functions (@vercel/node) | 5.1.6 |
-| Database | Neon PostgreSQL (@neondatabase/serverless) | 0.10.4 |
-| Authentication | jsonwebtoken + bcryptjs | 9.0.2 / 2.4.3 |
-| Email | Nodemailer (Brevo SMTP) | 6.9.16 |
-| Photo Storage | Cloudinary | API v2 |
-| Deployment | Vercel Hobby (12-function limit) | — |
+### 1. Multi-Role Authentication
+**Status:** ✅ Shipped
 
----
-
-## Milestones Achieved
-
-### M1 · Core Platform & Authentication
-
-**Status: ✅ Shipped**
-
-A complete multi-role authentication system from scratch, supporting four distinct user types with role-based access control.
-
-**What was built:**
-- JWT-based authentication (7-day expiry, auto-logout on 401)
-- Four user roles: `customer`, `detailer`, `owner`, `admin`
-- Email + password registration with bcrypt hashing
-- Password reset flow via tokenized email links (1-hour expiry)
-- Role-specific dashboard routing and protected routes
-- Owner approval gating — owners start as `approval_status='pending'` and cannot access the dashboard until an admin approves them
-- Persistent auth state via `localStorage` with auto-restore on page load
-- `requireAuth()` middleware used across all 12 API endpoints
+- JWT authentication (HS256, 7-day tokens)
+- Four roles: `customer`, `detailer`, `owner`, `admin`
+- Google OAuth 2.0 (callback at `/api/auth/google-callback`)
+- Email/password registration with bcrypt hashing
+- Forgot-password flow with time-limited reset tokens (SMTP via Brevo)
+- Owner approval gating — owners must be approved by admin before accessing dashboard
+- KYC submission endpoint (`POST /api/auth/submit-kyc`)
 
 **Key files:**
-- `api/auth/[[...slug]].ts` — login, register, me, forgot-password, google, google-callback, submit-kyc
-- `api/_lib/auth.ts` — JWT helpers, `requireAuth()` middleware
-- `src/pages/LoginPage.tsx`, `RegisterPage.tsx`, `ForgotPasswordPage.tsx`
-- `src/components/ProtectedRoute.tsx` — Role guard HOC
+- `api/auth/[[...slug]].ts` — all auth routes
+- `api/_lib/auth.ts` — JWT sign/verify helpers
+- `api/_lib/email.ts` — professional HTML email templates (8 templates)
 
 ---
 
-### M2 · Booking System & Escrow Logic
+### 2. Booking System + Escrow
+**Status:** ✅ Shipped
 
-**Status: ✅ Shipped**
-
-A complete booking lifecycle system with escrow protection for customers — funds are held and only released after service completion.
-
-**What was built:**
-- 3-step booking wizard: browse services → select vehicle/time/payment → checkout
-- Booking statuses: `pending → confirmed → in_progress → completed / cancelled`
-- Payment statuses: `pending → captured → released / failed`
-- **Escrow mechanism:** When M-Pesa/crypto payment is captured, funds are held (`payment_status='captured'`). They auto-release to `released` after 2 hours if the customer doesn't dispute — OR are manually released by the customer confirming completion
-- Auto-release background job runs on every `GET /api/bookings` call (serverless-friendly pattern)
-- `payment_timing` field: `'now'` (charge immediately) vs. `'pickup'` (charge at arrival)
-- Transaction record created alongside every booking
-- Notifications created for owners on new bookings
-- Post-completion: customers can submit a rating (1–5) and written review
-
-**Key files:**
-- `api/bookings/[[...slug]].ts`
-- `src/pages/BookService.tsx` — Booking wizard (37KB, most complex frontend component)
-- `src/pages/CustomerBookings.tsx` — Booking history + review submission
-
----
-
-### M3 · M-Pesa Payment Integration
-
-**Status: ✅ Shipped**
-
-Full Safaricom Daraja API integration — the most widely used payment method in Kenya.
-
-**What was built:**
-- M-Pesa STK Push initiation (`POST /api/payments/mpesa-stk`) — sends a payment prompt directly to the customer's phone
-- Safaricom async webhook handler (`POST /api/payments/mpesa-callback`) — processes payment outcome, updates transaction and booking status, awards loyalty points, sends notifications
-- Payment status polling: frontend polls `GET /api/payments/status` every 3 seconds (max 20 attempts) for real-time feedback without websockets
-- M-Pesa code stored in `transactions.mpesa_code` for receipts
-- Merchant Request ID and Checkout Request ID tracked for reconciliation
-- Sandbox/production config via environment variables
-- Graceful handling of Daraja API errors with user-facing messages
-
-**Payment flow:**
+**Status lifecycle:**
 ```
-Customer enters phone
-  → POST /api/payments/mpesa-stk
-  → Safaricom sends STK Push to phone
-  → Frontend polls status every 3s
-  → Customer approves on phone
-  → Safaricom POSTs to /api/payments/mpesa-callback
-  → booking.payment_status = 'captured'
-  → Escrow period begins (2 hours)
+pending → confirmed → in_progress → awaiting_confirmation → completed
+                                                          → cancelled
+```
+
+**Payment status lifecycle:**
+```
+pending → captured → released
+```
+
+- Customers book a service at a location with date/time
+- Two payment timings: **Pay Now** (escrow at booking) and **Pay at Pickup** (pay when car is ready)
+- Escrow auto-releases after 2 hours if customer doesn't confirm
+- Lazy DB migrations — schema changes via `ALTER TABLE ADD COLUMN IF NOT EXISTS` wrapped in `.catch(() => {})`
+- Staff assignment (both online detailers and offline owner_staff)
+- Before/after photo upload via Cloudinary
+
+**Key files:**
+- `api/bookings/[[...slug]].ts` — full CRUD, status transitions, escrow logic
+- `src/pages/customer/BookService.tsx` — booking wizard (browse → center → checkout → paying → confirmed)
+- `src/pages/customer/CustomerBookings.tsx` — booking list with pay/confirm dialog
+
+---
+
+### 3. M-Pesa STK Push (Daraja API)
+**Status:** ✅ Shipped
+
+- `POST /api/payments/mpesa-stk` — pay-now flow: sends STK push to customer at booking time
+- `POST /api/payments/mpesa-stk-pickup` — pay-at-pickup flow: customer-triggered STK push when car is ready
+- `POST /api/payments/mpesa-callback` — Safaricom webhook updates transaction + booking status
+- Frontend polling every 3 seconds (max 20 polls = 60 seconds timeout)
+- Switch between sandbox and production via `MPESA_ENV=production` env var
+- Phone normalisation: `07xx` → `2547xx`, strips `+`
+
+**Env vars required:**
+```
+MPESA_CONSUMER_KEY
+MPESA_CONSUMER_SECRET
+MPESA_SHORTCODE
+MPESA_PASSKEY
+MPESA_ENV=production         # or leave unset for sandbox
 ```
 
 **Key files:**
-- `api/payments/[[...slug]].ts` — mpesa-stk, mpesa-callback, status, transactions
-- `src/pages/BookService.tsx` — STK Push initiation + polling UI
+- `api/_lib/mpesa.ts` — shared Daraja helpers (`initiateStkPush`, `initiateB2CPayout`, `payoutOwnerShare`)
+- `api/payments/[[...slug]].ts` — all payment route handlers
 
 ---
 
-### M4 · Crypto Payments on Avalanche
+### 4. M-Pesa Escrow + B2C Owner Payout
+**Status:** ✅ Shipped
 
-**Status: ✅ Shipped**
+When a customer confirms service completion (`PATCH /api/bookings/:id { confirmPickup: true }`):
+1. Booking status → `completed`, payment_status → `released`
+2. `payoutOwnerShare(ownerId, totalPaid, bookingId)` is called
+3. Looks up owner's M-Pesa payout config (`mpesa_payout_type`, `mpesa_payout_till`, etc.)
+4. Sends 90% to owner via Daraja B2C `BusinessPayment`
 
-USDT and USDC payments on Avalanche C-Chain via injected wallets (MetaMask, Core, Trust Wallet).
+**B2C payout config options for owners:**
+| Type | Description |
+|------|-------------|
+| `phone` | Send Money to a Safaricom number |
+| `till` | Buy Goods / Till Number |
+| `paybill` | Paybill with account number |
 
-**What was built:**
-- ERC-20 token transfer using ethers.js v6
-- Network detection + auto-switch to Avalanche C-Chain (`chainId: 0xa86a`)
-- Dual-transfer: 10% fee to AutoFlow's wallet, 90% to service owner's registered wallet address
-- If owner has no wallet registered, 100% goes to AutoFlow wallet (no funds lost)
-- Transaction hash stored in `transactions.crypto_tx_hash` for on-chain verification
-- Token support: USDT (`0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7`) and USDC (`0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E`) on mainnet
-- Fuji testnet support for development (both tokens: Circle's test token `0x5425890...`)
-- KES price displayed in-app with real-time conversion
+**Additional env vars for B2C:**
+```
+MPESA_INITIATOR_NAME        # Daraja B2C initiator username
+MPESA_SECURITY_CREDENTIAL   # Encrypted credential from Daraja portal
+```
+
+> Note: B2C requires Safaricom activation (apply at developer.safaricom.co.ke). Without it, payout silently skips (escrow remains until manual payout).
+
+---
+
+### 5. USDT / USDC Payments on Avalanche C-Chain
+**Status:** ✅ Shipped
+
+**Payment paths:**
+1. **Injected wallet** (MetaMask, Core Wallet, Trust Wallet) — via `window.ethereum`
+2. **WDK in-app wallet** (Tether WDK embedded wallet, no extension needed)
+
+**Smart contract path (if `VITE_AUTOFLOW_CONTRACT` is set):**
+- Customer approves contract to spend tokens
+- `payWithToken(bookingId, ownerWallet, tokenAddress, amount)` — atomic 90/10 split on-chain
+
+**Fallback path (no contract):**
+- Two direct ERC-20 transfers: 10% to AutoFlow wallet, 90% to owner wallet
+
+**Token addresses:**
+| Token | Mainnet | Fuji Testnet |
+|-------|---------|--------------|
+| USDT | `0x9702230A...` | `0x54258902...` (Circle test USDC) |
+| USDC | `0xB97EF9Ef...` | `0x54258902...` |
+
+**Env vars:**
+```
+VITE_AUTOFLOW_WALLET         # AutoFlow's Avalanche address (receives 10%)
+VITE_AUTOFLOW_CONTRACT       # Deployed AutoFlowPayments.sol address (optional)
+VITE_USE_TESTNET=true        # Use Fuji testnet (demo mode)
+VITE_AVAX_RPC                # Custom RPC (optional, defaults to public)
+```
 
 **Key files:**
-- `src/lib/crypto.ts` — Injected wallet detection, chain switching, ERC-20 transfers
-- `src/pages/BookService.tsx` — Crypto checkout UI
+- `src/lib/crypto.ts` — full payment flow (`runCryptoPayment`, `sendSplitPaymentInjected`, `snowtraceUrl`)
+- `src/lib/wdk.ts` — Tether WDK embedded wallet helpers
 
 ---
 
-### M5 · Tether WDK Embedded Wallet
+### 6. AutoFlowPayments Smart Contract
+**Status:** ✅ Shipped — deployed on Avalanche C-Chain (Fuji testnet ready)
 
-**Status: ✅ Shipped**
+**Contract:** `contracts/AutoFlowPayments.sol` (Solidity 0.8.20)
 
-A self-custodial, browser-based wallet using Tether's WDK (Wallet Development Kit) — no browser extension required.
+**Key functions:**
+```solidity
+payWithToken(string bookingId, address businessWallet, address tokenAddress, uint256 amount)
+payWithAVAX(string bookingId, address businessWallet) payable
+previewSplit(uint256 amount) view returns (uint256 businessAmount, uint256 platformFee)
+```
 
-**What was built:**
-- 12-word BIP-39 seed phrase generation via `WDK.getRandomSeedPhrase(12)`
-- HD wallet derivation using `WalletManagerEvm(seed).getAccount(0)` → Avalanche C-Chain address
-- Seed phrase stored in `localStorage` (encryption via WebCrypto AES-GCM is on the roadmap)
-- UX: seed phrase displayed once with copy button + mandatory backup checkbox before funding is allowed
-- Wallet restore from existing seed phrase
-- Forget wallet (clears localStorage, no server state)
-- Live balance display: AVAX, USDT, USDC fetched from Avalanche RPC
-- Private key wiped from memory via `account.dispose()` immediately after every transaction
-- WDK wallet also used for service payments in BookService.tsx checkout step
+**Events:**
+```solidity
+PaymentProcessed(bookingId, businessWallet, token, totalAmount, businessAmount, platformFee, timestamp)
+```
+
+- Platform fee: 10% (1000 basis points), configurable by owner
+- Rejects direct AVAX sends (must go through `payWithAVAX`)
+- Admin functions: `setPlatformWallet`, `setPlatformFee`, `transferOwnership`
+
+**Deploy commands:**
+```bash
+cd contracts
+npm install
+cp .env.example .env   # set DEPLOYER_PRIVATE_KEY, PLATFORM_WALLET, SNOWTRACE_API_KEY
+npm run deploy:fuji    # Fuji testnet
+npm run deploy:mainnet # Avalanche C-Chain mainnet
+```
+
+After deploy, set `VITE_AUTOFLOW_CONTRACT=<deployed address>` in Vercel env vars.
+
+---
+
+### 7. Tether WDK Embedded Wallet
+**Status:** ✅ Shipped
+
+- Browser-native self-custodial wallet (no extension required)
+- 12-word BIP-39 mnemonic generation
+- HD key derivation (BIP-44, Avalanche path `m/44'/9000'/0'/0/0`)
+- Balance display for USDT and USDC
+- Auto-wipes private key from memory after signing
+- Stores encrypted seed in `localStorage`
 
 **Key files:**
-- `src/lib/wdk.ts` — WDK initialization, wallet creation, transfer
-- `src/pages/CustomerWallet.tsx` — Full wallet UI (29KB)
+- `src/lib/wdk.ts` — wallet creation, balance fetch, `sendViaWDK`
+- `src/components/WDKWallet.tsx` — wallet UI (create/restore/balance)
 
 ---
 
-### M6 · Chainlink On-Chain Price Feeds
+### 8. Owner Payment Settings
+**Status:** ✅ Shipped
 
-**Status: ✅ Shipped**
+Owners configure payout preferences in their dashboard (`/owner/payments`):
+- **M-Pesa payout type:** Send Money (phone), Buy Goods (Till), Paybill
+- **Crypto wallet:** Avalanche address to receive 90% of crypto payments
+- Settings saved via `PATCH /api/users/:id`
+- SnowTrace link displayed for every on-chain transaction
 
-Real-time, verifiable price data fetched directly from Chainlink AggregatorV3 contracts on Avalanche C-Chain — not relying solely on centralized APIs.
-
-**What was built:**
-- Direct RPC calls to Chainlink price feed contracts:
-  - AVAX/USD: `0xFF3EEb22B5E3dE6e705b44749C2559d704923FD`
-  - USDT/USD: `0xEBE676ee90Fe1112671f19b6B7459bC678B67e8`
-  - USDC/USD: `0xF096872672F44d6EBA71527d2277B5b7A1E4D63`
-- Staleness check: rejects data older than 1 hour (`updatedAt` from `latestRoundData()`)
-- Graceful fallback to CoinGecko REST API if Chainlink RPC is unavailable
-- KES/USD rate from `open.er-api.com` (no API key needed; no Chainlink KES feed on Avalanche)
-- Source badge in CustomerWallet.tsx: clearly shows "Chainlink" vs "CoinGecko" so users know data provenance
-- Price used in BookService.tsx for crypto-to-KES conversion at checkout
+**DB columns added (lazy migration):**
+```sql
+ALTER TABLE users ADD COLUMN IF NOT EXISTS mpesa_payout_type TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS mpesa_payout_till TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS mpesa_payout_paybill TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS mpesa_payout_account TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS crypto_wallet TEXT;
+```
 
 **Key files:**
-- `src/lib/prices.ts` — Chainlink ABI, multi-source price resolution, KES conversion
+- `src/pages/owner/OwnerPayments.tsx` — settings dialog + transactions table
+- `api/users/[[...slug]].ts` — GET/PATCH with new payment fields
 
 ---
 
-### M7 · Owner Business Management
+### 9. Owner Request-Payment (STK Push to Customer)
+**Status:** ✅ Shipped
 
-**Status: ✅ Shipped**
+Owners can send an STK push to a customer's phone directly from the bookings view:
+- Button: **Request Payment** on non-completed bookings where payment is pending
+- Owner enters customer phone → customer receives STK push
+- `POST /api/payments/request-payment` — owner/admin only, validates booking ownership
 
-Complete business management tooling for car wash owners — the primary revenue-generating user type on the platform.
+**Key files:**
+- `src/pages/owner/OwnerBookings.tsx` — Request Payment button + dialog
+- `api/payments/[[...slug]].ts` — `handleRequestPayment`
 
-**What was built:**
-- **Locations CRUD:** Create/edit/delete business locations with name, address, city, latitude/longitude, active status. Locations appear to customers during booking.
-- **Services CRUD:** Create/edit/delete services with name, description, price (KES), duration (minutes), category, image URL, active toggle. 28 global service templates available to seed.
-- **Service Templates:** Pre-seeded on first API call. Categories: Exterior Wash, Interior Clean, Packages, Polish & Protection, Full Detail, Engine & Wheels, Glass & Upholstery. Prices KES 300–20,000.
-- **Owner Bookings View:** See all bookings for services under owned locations. Filter by status. Assign a detailer or offline staff member to any booking.
-- **Analytics Dashboard:** Charts for monthly revenue, bookings by status, top services by volume and revenue, customer growth over time.
-- **Payments History:** View all transactions tied to owned services.
-- **Wallet Address:** Owners register their Avalanche wallet address to receive 90% of crypto payments.
+---
+
+### 10. Business Management (Locations, Services, Analytics)
+**Status:** ✅ Shipped
+
+- Full CRUD for locations (name, address, city, lat/lng)
+- 28 service templates across categories (Exterior, Interior, Full Detail, Specialty, Mobile)
+- Owner analytics: revenue chart, bookings chart, customer stats, top services
+- Revenue breakdown: gross vs. net (after 10% platform fee)
 
 **Key files:**
 - `api/locations/[[...slug]].ts`, `api/services/[[...slug]].ts`
-- `src/pages/OwnerLocations.tsx`, `OwnerServices.tsx`, `OwnerBookings.tsx`, `OwnerAnalytics.tsx`
+- `api/analytics/index.ts`
+- `src/pages/owner/OwnerLocations.tsx`, `src/pages/owner/OwnerServices.tsx`
+- `src/pages/owner/OwnerAnalytics.tsx`
 
 ---
 
-### M8 · Detailer Workflow & Earnings
+### 11. Detailer Workflow
+**Status:** ✅ Shipped
 
-**Status: ✅ Shipped**
-
-A dedicated workflow for detailers — the field workers who execute car wash jobs.
-
-**What was built:**
-- **Job Management:** Detailers see only their assigned bookings. Job card shows customer name, vehicle, service, location, and scheduled time.
-- **Status Transitions:** Detailer can move a job through: `confirmed → in_progress → completed`. Buttons appear contextually based on current status.
-- **Before/After Photos:** Detailer uploads photos to Cloudinary before and after completing a job. URLs stored in `bookings.before_photos[]` and `bookings.after_photos[]`.
-- **Schedule Management:** Weekly availability editor. Set working hours per day of week (Mon–Sat/Sun). Default schedule auto-created on registration: Mon–Fri 08:00–17:00.
-- **Earnings Dashboard:** Shows 40% commission per completed job. Summary: today's earnings, this week's, lifetime total, and completed job count. Last 100 jobs displayed.
-- Commission: Hard-coded at 40% of service price.
+- Detailer dashboard: assigned bookings, status controls
+- Status transitions allowed for detailers: `in_progress`, `awaiting_confirmation`
+- Upload before/after photos (Cloudinary)
+- Earnings tracker: 40% commission on all completed bookings
+- Schedule view with upcoming bookings
 
 **Key files:**
+- `src/pages/detailer/DetailerDashboard.tsx`
 - `api/detailer/[[...slug]].ts` — earnings, schedule
-- `src/pages/DetailerJobs.tsx`, `DetailerSchedule.tsx`, `DetailerEarnings.tsx`
 
 ---
 
-### M9 · Customer Experience Layer
+### 12. Staff Management
+**Status:** ✅ Shipped
 
-**Status: ✅ Shipped**
+- **Online detailers:** Registered users with `detailer` role, invited by owners
+- **Offline staff:** `owner_staff` table — name, phone, notes, wash count. No app account required.
+- Assign either type to any booking
+- Staff list with activity stats
 
-The complete customer-facing product — from discovering services to completing a booking.
-
-**What was built:**
-- **BookService wizard (3 steps):**
-  1. Browse locations and services with search + filter by category
-  2. Select vehicle (or skip), date, time, payment method (M-Pesa / USDT / USDC)
-  3. Checkout — enter M-Pesa phone or connect wallet, confirm payment timing
-- **Vehicle Management:** Customers register vehicles (make, model, year, color, license plate). Vehicles are optionally attached to bookings.
-- **Booking History:** View all past and upcoming bookings with status indicators. Cancel eligible bookings. Submit rating and review after completion.
-- **Dashboard:** Quick stats — upcoming bookings count, total spent, loyalty tier, recent activity.
-- **Payment timing choice:** "Pay now" or "Pay on arrival" — escrow is only captured after in-person service confirmation.
-
-**Key files:**
-- `src/pages/BookService.tsx`, `CustomerBookings.tsx`, `CustomerVehicles.tsx`, `CustomerDashboard.tsx`
+**DB schema:**
+```sql
+CREATE TABLE owner_staff (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  phone TEXT,
+  notes TEXT,
+  total_washes INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS staff_id UUID REFERENCES owner_staff(id) ON DELETE SET NULL;
+```
 
 ---
 
-### M10 · Loyalty Points System
+### 13. Loyalty Points (4 Tiers)
+**Status:** ✅ Shipped
 
-**Status: ✅ Shipped**
-
-A tiered loyalty programme that rewards customers for every wash booked through the platform.
-
-**What was built:**
-- Points awarded on M-Pesa payment capture: `ceil(amount / 10)` — 1 point per KES 10
-- Points recorded in `loyalty_points` table with booking reference
-- Four tiers: Bronze (0–999), Silver (1,000–2,999), Gold (3,000–4,999), Platinum (5,000+)
-- Customer Loyalty page: current points, tier badge, progress bar to next tier, full points history
-- `GET /api/loyalty` returns tier state, points to next level, and last 20 history entries
+- Earn 1 point per KES 10 spent
+- Tiers: Bronze (0) → Silver (1,000) → Gold (3,000) → Platinum (5,000)
+- Points history and tier progress tracker
 
 **Key files:**
 - `api/loyalty/index.ts`
-- `src/pages/CustomerLoyalty.tsx`
+- `src/pages/customer/LoyaltyPage.tsx`
 
 ---
 
-### M11 · Admin & Approvals System
+### 14. Chainlink Price Feeds (AVAX/KES)
+**Status:** ✅ Shipped
 
-**Status: ✅ Shipped**
-
-Platform-level administration, including the owner onboarding approval workflow.
-
-**What was built:**
-- **Owner Approval Workflow:**
-  1. Owner registers → `approval_status='pending'`, email sent to admin
-  2. Admin views queue at `GET /api/admin/approvals`
-  3. Admin approves or rejects via `PATCH /api/admin/approvals`
-  4. Owner receives outcome email (approve → "Welcome to AutoFlow", reject → reason included)
-- **User Management:** Admin can list all users, create users with any role (including pre-set passwords), soft-delete accounts
-- **Transaction View:** Admin sees all transactions platform-wide — method breakdown, M-Pesa codes, crypto hashes
-- **Global Service Management:** Admin can view/moderate all services across all owners
-- **Platform Bookings:** High-level view of all bookings
+- On-chain AVAX/USDT/USDC prices via Chainlink AggregatorV3
+- 10-minute staleness guard
+- CoinGecko fallback if Chainlink is stale/unavailable
+- Used for live KES → USD conversion at checkout
 
 **Key files:**
-- `api/admin/approvals.ts`, `api/users/[[...slug]].ts`
-- `src/pages/AdminApprovals.tsx`, `AdminUsers.tsx`, `AdminTransactions.tsx`
+- `src/lib/prices.ts`
 
 ---
 
-### M12 · Email Notification System
+### 15. Notifications
+**Status:** ✅ Shipped
 
-**Status: ✅ Shipped**
+- In-app notifications (bell icon)
+- 8 email templates: booking confirmation, status updates, owner approval, detailer invite, payment confirmed
+- `GET /api/notifications` — paginated list with unread count
+- `PATCH /api/notifications/:id` — mark as read
 
-Professional transactional email system using Nodemailer with Brevo SMTP — responsive HTML templates for every key event.
+---
 
-**Templates implemented:**
-| Trigger | Recipients | Content |
-|---------|-----------|---------|
-| Booking Confirmation | Customer | Service, location, date/time, payment method, booking ID |
-| Booking Status Update | Customer | New status, next steps |
-| Password Reset | User | Tokenized link (1-hour expiry) |
-| Owner Pending | New owner | "Your application is under review" |
-| Owner Approved | Owner | Welcome email, dashboard link |
-| Owner Rejected | Owner | Rejection reason, support contact |
-| Owner — New Booking | Owner | Customer name, service, scheduled time |
-| Detailer Invite | New detailer | Temporary password, setup instructions |
+### 16. Admin Dashboard
+**Status:** ✅ Shipped
+
+- Owner approval queue (approve / reject with email notification)
+- User management (list, role filter, deactivate)
+- Platform-wide booking oversight
+- Transaction history across all users
 
 **Key files:**
-- `api/_lib/email.ts` — All HTML templates + `sendMail()` wrapper
+- `api/admin/approvals.ts`
+- `src/pages/admin/AdminDashboard.tsx`
 
 ---
 
-### M13 · Analytics Dashboard
+## Architecture Notes
 
-**Status: ✅ Shipped**
-
-Data-driven insights for owners and admins, served from a single aggregated endpoint.
-
-**What was built:**
-- Revenue by month (last 6 months) — bar chart
-- Bookings by status — pie/donut chart
-- Top 10 services by booking count and revenue — ranked list
-- Customer growth by month (new customers) — line chart
-- KPIs: totalBookings, completedBookings, totalRevenue, avgRating
-- Role-scoped: owners see only their own data; admins see platform-wide
-- All data from a single `GET /api/analytics` endpoint (one DB round-trip for all metrics)
-
-**Key files:**
-- `api/analytics/index.ts`
-- `src/pages/OwnerAnalytics.tsx`
-
----
-
-### M14 · Google OAuth
-
-**Status: ✅ Shipped**
-
-Sign in with Google — accounts matched by email, new accounts auto-created on first sign-in.
-
-**What was built:**
-- `GET /api/auth/google` — builds Google OAuth 2.0 authorization URL and redirects
-- `GET /api/auth/google-callback` — exchanges code for tokens, fetches profile, upserts user record, issues JWT
-- Existing email accounts linked automatically (google_id stored on user)
-- New accounts created as `customer` role by default
-- Frontend: `LoginPage.tsx` listens for `?token=` in URL after OAuth callback, stores JWT
-- Callback URI: `{APP_URL}/api/auth/google-callback`
-
-**Key files:**
-- `api/auth/[[...slug]].ts` (google + google-callback handlers)
-- `src/pages/LoginPage.tsx`
-
----
-
-### M15 · Staff Management (Offline + Online)
-
-**Status: ✅ Shipped**
-
-Owners can manage both off-platform staff (no app account) and registered detailers through a unified interface.
-
-**What was built:**
-- **Offline Staff** (`owner_staff` table): Add workers by name + optional phone + notes. No app account required. Total wash count tracked. Can be assigned to bookings as `staff_id`.
-- **Online Detailers** (`owner_detailers` table): Invite existing detailers by email, or create new detailer accounts (temp password sent by email). Many-to-many relationship.
-- Dual-tab UI in `OwnerStaff.tsx`: "Offline Staff" and "Online Detailers"
-- Booking assignment: owner can assign either an offline staff member or an online detailer to any booking from `OwnerBookings.tsx`
-- `GET /api/users/staff` — owner's offline staff list
-- `GET /api/users/lookup?email=&role=detailer` — search detailers to invite
-
-**Key files:**
-- `api/users/[[...slug]].ts` (staff routes)
-- `src/pages/OwnerStaff.tsx`
-
----
-
-### M16 · Photo Documentation (Before/After)
-
-**Status: ✅ Shipped**
-
-Visual job documentation — detailers capture before/after photos at each job to provide proof of service quality.
-
-**What was built:**
-- Photo upload from `DetailerJobs.tsx` using Cloudinary unsigned upload preset
-- Separate upload slots: "Before" photos (taken at arrival) and "After" photos (taken at completion)
-- Multiple photos supported per slot (stored as `TEXT[]` array of Cloudinary URLs)
-- Photos stored in `bookings.before_photos[]` and `bookings.after_photos[]`
-- Cloudinary configured via `VITE_CLOUDINARY_CLOUD_NAME` + `VITE_CLOUDINARY_UPLOAD_PRESET`
-
-**Key files:**
-- `src/pages/DetailerJobs.tsx`
-
----
-
-## Architecture Highlights
-
-### API Architecture (12-Function Vercel Limit)
-
-The project runs on Vercel's Hobby plan (max 12 serverless functions). All endpoints use the `[[...slug]].ts` optional catch-all pattern to group related routes into a single function file:
-
+### Vercel Serverless Function Limit (Hobby Plan: 12 max)
+All routes use `[[...slug]].ts` catch-all pattern to stay within the 12-function limit:
 ```
-api/auth/[[...slug]].ts        → /api/auth/*
-api/bookings/[[...slug]].ts    → /api/bookings, /api/bookings/:id
-api/locations/[[...slug]].ts   → /api/locations, /api/locations/:id
-api/services/[[...slug]].ts    → /api/services, /api/services/:id, /api/services/templates
-api/users/[[...slug]].ts       → /api/users, /api/users/staff, /api/users/lookup, /api/users/:id
-api/vehicles/[[...slug]].ts    → /api/vehicles, /api/vehicles/:id
-api/payments/[[...slug]].ts    → /api/payments/mpesa-stk, /api/payments/mpesa-callback,
-                                  /api/payments/status, /api/payments/transactions
-api/detailer/[[...slug]].ts    → /api/detailer/earnings, /api/detailer/schedule
-api/admin/approvals.ts         → /api/admin/approvals
-api/analytics/index.ts         → /api/analytics
-api/notifications/index.ts     → /api/notifications, /api/notifications/:id
-api/loyalty/index.ts           → /api/loyalty
+api/bookings/[[...slug]].ts    → /api/bookings + /api/bookings/:id
+api/payments/[[...slug]].ts    → /api/payments/mpesa-stk, mpesa-callback, status, transactions, request-payment, mpesa-stk-pickup
+api/auth/[[...slug]].ts        → /api/auth/login, register, me, forgot-password, google, google-callback, submit-kyc
+... (9 more catch-all handlers)
 ```
 
-### Lazy Schema Migrations
+### Lazy Migrations Pattern
+Schema changes are applied on first request with no manual intervention:
+```typescript
+await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS crypto_wallet TEXT`.catch(() => {});
+```
 
-Rather than running a dedicated migration tool, the API applies schema changes lazily on first request using `ALTER TABLE ... IF NOT EXISTS` and `CREATE TABLE IF NOT EXISTS` patterns wrapped in `.catch(() => {})`. This allows zero-downtime schema evolution without a migration pipeline.
+### Payment Architecture
+```
+Customer pays → AutoFlow escrow (STK push to AutoFlow shortcode)
+     ↓ (on customer confirmation or 2hr auto-release)
+Daraja B2C → Owner's M-Pesa (90%)
+AutoFlow retains 10%
 
-### Payment Split (Crypto)
+— OR for crypto —
 
-For injected wallet (MetaMask/Core) crypto payments, the platform performs a **dual-transfer** in a single transaction batch:
-- 10% → `VITE_AUTOFLOW_WALLET` (platform commission)
-- 90% → owner's registered `wallet_address` (if set), else 100% to AutoFlow
-
-M-Pesa goes to a single shortcode; the 10%/90% split is handled at settlement time.
-
----
-
-## Database Schema Summary
-
-| Table | Purpose |
-|-------|---------|
-| `users` | All user types (customer, detailer, owner, admin) |
-| `vehicles` | Customer-owned vehicles |
-| `locations` | Business locations (owned by owners) |
-| `services` | Service catalog entries (owned by owners) |
-| `service_templates` | 28 global service templates (seeded once) |
-| `bookings` | Core booking record with escrow state |
-| `transactions` | Payment records (M-Pesa + crypto) |
-| `notifications` | In-app notifications per user |
-| `loyalty_points` | Points ledger per customer |
-| `detailer_schedules` | Weekly availability per detailer (7 rows each) |
-| `owner_detailers` | Many-to-many: owner ↔ online detailer |
-| `owner_staff` | Offline staff (no app account) |
-| `password_reset_tokens` | 1-hour expiry tokens for password resets |
+Customer wallet → AutoFlowPayments.sol (approve + payWithToken)
+     → Owner wallet (90%) + AutoFlow wallet (10%) atomically
+```
 
 ---
 
-## Roadmap
+## Environment Variables Reference
 
-See [RoadmapPage.tsx](src/pages/RoadmapPage.tsx) for the interactive UI version.
+```env
+# Database
+DATABASE_URL=postgresql://...
 
-### Q2 2026
+# Auth
+JWT_SECRET=...
 
-| Feature | Status | Description |
-|---------|--------|-------------|
-| Agora RTC Live View | 🔧 In Progress | Live video streaming between customer and detailer during service. UI complete, Agora SDK integration pending. |
-| Full Crypto Suite | 🔧 In Progress | Expand to AVAX direct payments + cross-chain support. |
-| Advanced BI Dashboard | 🔧 In Progress | Customer LTV, cohort analysis, detailer performance scoring, CSV/PDF exports. |
-| Kite AI Insights | 📋 Planned | AI-powered demand forecasting, dynamic pricing recommendations, churn prediction for owners. |
-| WDK Seed Encryption | 📋 Planned | Encrypt seed phrases in localStorage with WebCrypto AES-GCM instead of plaintext storage. |
-| Stripe Card Payments | 📋 Planned | Credit/debit card checkout as a 4th payment method. |
+# Email (Brevo SMTP)
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_USER=...
+SMTP_PASS=...
 
-### Q3 2026
+# Google OAuth
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
 
-| Feature | Status | Description |
-|---------|--------|-------------|
-| Suzaku AVAX Liquid Staking | 📋 Planned | One-click AVAX staking for owners/detailers via Suzaku Protocol. Earn yield on platform revenue. UI complete. |
-| DH3 Soulbound NFT Loyalty | 📋 Planned | Mint non-transferable NFTs representing loyalty tier (Bronze→Platinum). UI complete, smart contract pending. |
-| FCM Push Notifications | 📋 Planned | Mobile push notifications via Firebase Cloud Messaging. |
-| Decentralized Identity (DID) | 📋 Planned | W3C DID-based portable reputation for detailers. On-chain certifications. |
-| API Rate Limiting | 📋 Planned | Redis-backed rate limiting on auth and payment endpoints. |
+# App URL
+NEXT_PUBLIC_APP_URL=https://autoflow.vercel.app
 
-### Q4 2026
+# M-Pesa (Daraja)
+MPESA_CONSUMER_KEY=...
+MPESA_CONSUMER_SECRET=...
+MPESA_SHORTCODE=...
+MPESA_PASSKEY=...
+MPESA_ENV=production
+MPESA_INITIATOR_NAME=...      # B2C only
+MPESA_SECURITY_CREDENTIAL=... # B2C only
 
-| Feature | Status | Description |
-|---------|--------|-------------|
-| Multi-Country Expansion | 📋 Planned | Uganda, Tanzania, Rwanda, Nigeria. MTN MoMo + Airtel Money integrations. Multi-currency pricing. |
-| WalletConnect v2 | 📋 Planned | Mobile wallet support for iOS/Android via WalletConnect protocol. |
-| Franchise / White-Label | 📋 Planned | Configurable white-label offering for large car wash chains. |
-| Local Tax & Compliance | 📋 Planned | Per-country invoicing, VAT calculation, and compliance tooling. |
+# Crypto (Avalanche)
+VITE_AUTOFLOW_WALLET=0x...     # Receives 10% platform fee
+VITE_AUTOFLOW_CONTRACT=0x...   # AutoFlowPayments.sol address
+VITE_USE_TESTNET=false
+VITE_AVAX_RPC=                 # Optional custom RPC
+
+# Cloudinary (photo uploads)
+VITE_CLOUDINARY_CLOUD_NAME=...
+VITE_CLOUDINARY_UPLOAD_PRESET=...
+```
+
+---
+
+## Upcoming Roadmap (Q2–Q4 2026)
+
+| Quarter | Feature | Status |
+|---------|---------|--------|
+| Q2 2026 | Agora RTC Live View | In Progress |
+| Q2 2026 | Full Crypto Payment Suite (AVAX, cross-chain) | In Progress |
+| Q2 2026 | Advanced Business Intelligence | In Progress |
+| Q2 2026 | Kite AI Insights | Planned |
+| Q2 2026 | Stripe Card Payments | Planned |
+| Q2 2026 | WDK Seed Encryption (WebCrypto AES-GCM) | Planned |
+| Q3 2026 | Suzaku AVAX Liquid Staking | Planned |
+| Q3 2026 | DH3 Soulbound NFT Loyalty | Planned |
+| Q3 2026 | Decentralised Identity (DID) | Planned |
+| Q3 2026 | FCM Push Notifications | Planned |
+| Q4 2026 | Multi-Country Expansion (UG, TZ, RW, NG) | Planned |

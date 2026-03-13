@@ -124,7 +124,7 @@ function LocationForm({ f, setF, detecting, onDetect, onSave, saving, saveLabel 
 async function reverseGeocode(lat: number, lng: number) {
   const res = await fetch(
     `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`,
-    { headers: { 'Accept-Language': 'en', 'User-Agent': 'AutoFlow/1.0 (autoflowbuzz.vercel.app)' } }
+    { headers: { 'Accept-Language': 'en', 'User-Agent': 'AutoPayKe/1.0 (autopayk.vercel.app)' } }
   );
   if (!res.ok) throw new Error('Geocoding failed');
   return res.json() as Promise<{

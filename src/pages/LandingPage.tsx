@@ -451,7 +451,7 @@ export default function LandingPage() {
                 Run your car wash smarter
               </h2>
               <p className="text-muted-foreground mb-8 leading-relaxed">
-                AutoFlow gives car wash owners a complete operations platform — from managing bookings and staff to collecting payments and growing your customer base.
+                AutoPayKe gives car wash owners a complete operations platform — from managing bookings and staff to collecting payments and growing your customer base.
               </p>
               <ul className="space-y-3 mb-8">
                 {ownerPerks.map((p, i) => (
@@ -521,7 +521,7 @@ export default function LandingPage() {
                 I Own a Car Wash
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground mt-5">No subscription. No setup fees. AutoFlow earns only when you do.</p>
+            <p className="text-xs text-muted-foreground mt-5">No subscription. No setup fees. AutoPayKe earns only when you do.</p>
           </div>
         </div>
       </section>
@@ -534,10 +534,10 @@ export default function LandingPage() {
               <div className="w-7 h-7 rounded-lg gradient-primary flex items-center justify-center">
                 <Droplets className="w-3.5 h-3.5 text-white" />
               </div>
-              <span className="font-display text-foreground">AutoFlow</span>
+              <span className="font-display text-foreground">AutoPayKe</span>
             </div>
             <p className="text-xs text-muted-foreground text-center">
-              © 2026 AutoFlow · Built on Avalanche · Serving Kenya 🇰🇪
+              © 2026 AutoPayKe · Built on Avalanche · Serving Kenya 🇰🇪
             </p>
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
               <Link to="/login" className="hover:text-foreground transition-colors">Sign In</Link>

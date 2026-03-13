@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sql } from '../_lib/db';
+import { sql, rawSql } from '../_lib/db';
 import { requireAuth } from '../_lib/auth';
 import { handleCors } from '../_lib/cors';
 import {
@@ -273,11 +273,11 @@ async function handleTransactions(req: VercelRequest, res: VercelResponse) {
   `;
 
   if (auth.role === 'customer') {
-    transactions = await sql`${sql.unsafe(BASE)} WHERE t.customer_id = ${auth.userId} ORDER BY t.created_at DESC`;
+    transactions = await rawSql(`${BASE} WHERE t.customer_id = $1 ORDER BY t.created_at DESC`, [auth.userId]);
   } else if (auth.role === 'owner') {
-    transactions = await sql`${sql.unsafe(BASE)} WHERE s.owner_id = ${auth.userId} ORDER BY t.created_at DESC`;
+    transactions = await rawSql(`${BASE} WHERE s.owner_id = $1 ORDER BY t.created_at DESC`, [auth.userId]);
   } else if (auth.role === 'admin') {
-    transactions = await sql`${sql.unsafe(BASE)} ORDER BY t.created_at DESC LIMIT 1000`;
+    transactions = await rawSql(`${BASE} ORDER BY t.created_at DESC LIMIT 1000`, []);
   } else {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }

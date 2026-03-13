@@ -97,7 +97,7 @@ export default function CustomerWallet() {
       setSeedInput('');
       setShowRestore(false);
       refreshWdkBalances(wallet.address);
-      toast({ title: 'Wallet Restored', description: 'Your AutoFlow wallet has been restored.' });
+      toast({ title: 'Wallet Restored', description: 'Your AutoPayKe wallet has been restored.' });
     } catch (err) {
       toast({ title: 'Restore Failed', description: (err as Error).message, variant: 'destructive' });
     } finally {
@@ -111,7 +111,7 @@ export default function CustomerWallet() {
     setWdkBalances(null);
     setNewSeedPhrase('');
     setSeedConfirmed(false);
-    toast({ title: 'Wallet Removed', description: 'AutoFlow wallet removed from this device.' });
+    toast({ title: 'Wallet Removed', description: 'AutoPayKe wallet removed from this device.' });
   };
 
   // ── Injected wallet ──────────────────────────────────────────────────────────

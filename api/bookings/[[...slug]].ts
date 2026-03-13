@@ -8,6 +8,7 @@ import { payoutOwnerShare } from '../_lib/mpesa';
 function mapBooking(b: Record<string, unknown>) {
   return {
     id: b.id, customerId: b.customer_id, customerName: b.customer_name,
+    customerPhone: b.customer_phone,
     vehicleId: b.vehicle_id, vehicleName: b.vehicle_name,
     serviceId: b.service_id, serviceName: b.service_name,
     servicePrice: parseFloat(b.service_price as string),
@@ -21,6 +22,7 @@ function mapBooking(b: Record<string, unknown>) {
     rating: b.rating, review: b.review, notes: b.notes, createdAt: b.created_at,
     awaitingConfirmationAt: b.awaiting_confirmation_at || null,
     escrowReleasedAt: b.escrow_released_at || null,
+    ownerCryptoWallet: b.owner_crypto_wallet || null,
   };
 }
 

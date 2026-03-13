@@ -143,7 +143,7 @@ export async function initiateB2CPayout(
       Amount:              Math.floor(amount),
       PartyA:              shortcode,
       PartyB:              ownerPhone,
-      Remarks:             `AutoFlow owner payout booking ${bookingId.slice(0, 8)}`,
+      Remarks:             `AutoPayKe owner payout booking ${bookingId.slice(0, 8)}`,
       QueueTimeOutURL:     `${appUrl}/api/payments/b2c-timeout`,
       ResultURL:           `${appUrl}/api/payments/b2c-result`,
       Occassion:           bookingId.slice(0, 8),

@@ -140,7 +140,7 @@ export async function sendWelcomeEmail(
   const roleLabel = role === 'owner' ? 'Business Owner' : role.charAt(0).toUpperCase() + role.slice(1);
 
   const content = `
-    <h1>Welcome to AutoFlow, ${firstName}! 👋</h1>
+    <h1>Welcome to AutoPayKe, ${firstName}! 👋</h1>
     <p>We're thrilled to have you on board. Your account has been created and you're all set as a <span class="badge badge-blue">${roleLabel}</span>.</p>
     <div class="highlight-box">
       <p><strong>${msg.headline}</strong><br /><br />${msg.body}</p>
@@ -155,8 +155,8 @@ export async function sendWelcomeEmail(
   await transporter.sendMail({
     from: FROM,
     to: email,
-    subject: `Welcome to AutoFlow, ${firstName}!`,
-    html: emailLayout(content, `Hi ${firstName}, welcome to AutoFlow — the smart car care hub.`),
+    subject: `Welcome to AutoPayKe, ${firstName}!`,
+    html: emailLayout(content, `Hi ${firstName}, welcome to AutoPayKe — the smart car care hub.`),
   });
 }
 

@@ -238,8 +238,8 @@ export async function sendOwnerRejectedEmail(email: string, firstName: string): 
   await transporter.sendMail({
     from: FROM,
     to: email,
-    subject: 'AutoFlow — Update on your business owner application',
-    html: emailLayout(content, 'We have an update regarding your AutoFlow business owner application.'),
+    subject: 'AutoPayKe — Update on your business owner application',
+    html: emailLayout(content, 'We have an update regarding your AutoPayKe business owner application.'),
   });
 }
 

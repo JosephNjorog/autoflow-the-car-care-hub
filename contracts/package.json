@@ -1,0 +1,20 @@
+{
+  "name": "autoflow-contracts",
+  "version": "1.0.0",
+  "description": "AutoFlow payment smart contracts for Avalanche C-Chain",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "deploy:fuji": "hardhat run scripts/deploy.js --network fuji",
+    "deploy:mainnet": "hardhat run scripts/deploy.js --network avalanche",
+    "verify:fuji": "hardhat verify --network fuji",
+    "verify:mainnet": "hardhat verify --network avalanche"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "hardhat": "^2.22.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
+}

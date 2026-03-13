@@ -45,7 +45,7 @@ async function handleMpesaStk(req: VercelRequest, res: VercelResponse) {
       normalisePhone(phone as string),
       amount,
       bookingId as string,
-      `AutoFlow: ${booking.service_name} at ${booking.location_name}`,
+      `AutoPayKe: ${booking.service_name} at ${booking.location_name}`,
     );
 
     await sql`
@@ -68,7 +68,7 @@ async function handleMpesaStk(req: VercelRequest, res: VercelResponse) {
 
 // ── POST /api/payments/request-payment ───────────────────────────────────────
 // Owner-triggered STK push: owner enters customer phone → customer pays via M-Pesa PIN.
-// This uses AutoFlow's shortcode; the 90% payout to owner happens on escrow release.
+// This uses AutoPayKe's shortcode; the 90% payout to owner happens on escrow release.
 async function handleRequestPayment(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const auth = requireAuth(req, res);

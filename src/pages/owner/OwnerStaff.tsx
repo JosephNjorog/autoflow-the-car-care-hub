@@ -301,7 +301,7 @@ export default function OwnerStaff() {
             <div className="text-center py-14">
               <UserPlus className="w-12 h-12 text-muted-foreground/40 mx-auto mb-4" />
               <p className="text-muted-foreground font-medium">No linked detailers</p>
-              <p className="text-sm text-muted-foreground mt-1">Add detailers who have (or need) an AutoFlow account.</p>
+              <p className="text-sm text-muted-foreground mt-1">Add detailers who have (or need) an AutoPayKe account.</p>
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

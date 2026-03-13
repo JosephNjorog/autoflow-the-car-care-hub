@@ -162,7 +162,7 @@ export async function sendCryptoPaymentInjected(
 
   const tokenInfo = TOKENS[token];
   if (!recipientAddress || recipientAddress === '0x0000000000000000000000000000000000000000') {
-    throw new Error('AutoFlow payment wallet not configured. Please contact support.');
+    throw new Error('AutoPayKe payment wallet not configured. Please contact support.');
   }
 
   const provider = new BrowserProvider(window.ethereum);

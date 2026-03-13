@@ -77,7 +77,7 @@ async function handleRegister(req: VercelRequest, res: VercelResponse) {
 
   await sql`
     INSERT INTO notifications (user_id, title, message, type)
-    VALUES (${user.id}, 'Welcome to AutoFlow!', 'Your account has been created successfully. Book your first car wash today!', 'system')
+    VALUES (${user.id}, 'Welcome to AutoPayKe!', 'Your account has been created successfully. Book your first car wash today!', 'system')
   `;
 
   if (approvalStatus === 'pending') {
@@ -201,7 +201,7 @@ async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
       `;
       await sql`
         INSERT INTO notifications (user_id, title, message, type)
-        VALUES (${user.id}, 'Welcome to AutoFlow!', 'Your account has been created via Google. Book your first car wash today!', 'system')
+        VALUES (${user.id}, 'Welcome to AutoPayKe!', 'Your account has been created via Google. Book your first car wash today!', 'system')
       `;
       sendWelcomeEmail(user.email as string, user.first_name as string, 'customer')
         .catch((err: unknown) => console.error('Google welcome email failed:', err));

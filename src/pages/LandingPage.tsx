@@ -115,7 +115,7 @@ export default function LandingPage() {
             <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shadow-glow">
               <Droplets className="w-4 h-4 text-white" />
             </div>
-            <span className="font-display text-xl text-foreground">AutoFlow</span>
+            <span className="font-display text-xl text-foreground">AutoPayKe</span>
           </Link>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>

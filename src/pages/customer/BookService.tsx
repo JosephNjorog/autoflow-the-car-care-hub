@@ -172,7 +172,7 @@ export default function BookService() {
               payment_options: 'card',
               customer: { email: user?.email, name: user?.name, phone_number: user?.phone },
               customizations: {
-                title: 'AutoFlow Payment',
+                title: 'AutoPayKe Payment',
                 description: `${selectedServiceData?.name} at ${selectedLocation?.name}`,
                 logo: '/logo.png',
               },
@@ -245,7 +245,7 @@ export default function BookService() {
             <div className="rounded-xl bg-success/10 border border-success/20 p-4 mb-8 text-left w-full">
               <p className="text-sm font-medium text-foreground mb-1">Payment in Escrow</p>
               <p className="text-xs text-muted-foreground">
-                Your payment is securely held by AutoFlow. It will be released to the car wash only after you confirm service completion.
+                Your payment is securely held by AutoPayKe. It will be released to the car wash only after you confirm service completion.
               </p>
             </div>
           )}

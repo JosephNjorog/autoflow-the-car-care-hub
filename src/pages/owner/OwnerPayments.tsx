@@ -247,8 +247,23 @@ export default function OwnerPayments() {
       <PageHeader
         title="Payments"
         subtitle="Track transactions and configure your payout settings"
-        action={<PaymentSettingsDialog />}
       />
+
+      {/* ── Payout Settings Card (always visible) ─────────────────────────── */}
+      <div className="mb-6 rounded-xl border border-primary/20 bg-primary/5 p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Settings className="w-4 h-4 text-primary" />
+            <span className="font-medium text-foreground">Payout Settings</span>
+            <span className="text-xs text-muted-foreground">— where AutoPayKe sends your 90% earnings</span>
+          </div>
+          <PaymentSettingsDialog />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Configure your M-Pesa payout phone, Till, or Paybill number — and your Avalanche wallet for crypto payments.
+          Click <strong>Payment Settings</strong> to set up or update your details.
+        </p>
+      </div>
 
       {/* Summary strip */}
       {transactions.length > 0 && (

@@ -11,12 +11,28 @@ import {
   MPESA_BASE,
 } from '../_lib/mpesa';
 
+// ── Lazy migrations (run once on first request to this function) ──────────────
+async function runMigrations() {
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_timing TEXT DEFAULT 'now'`.catch(() => {});
+  await sql`ALTER TABLE bookings ALTER COLUMN status TYPE TEXT`.catch(() => {});
+  await sql`ALTER TABLE bookings ALTER COLUMN payment_status TYPE TEXT`.catch(() => {});
+  await sql`ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_status_check`.catch(() => {});
+  await sql`ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_payment_status_check`.catch(() => {});
+  await sql`ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_status_check`.catch(() => {});
+  await sql`ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_method_check`.catch(() => {});
+  await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS mpesa_checkout_request_id TEXT`.catch(() => {});
+  await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS mpesa_merchant_request_id TEXT`.catch(() => {});
+  await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS mpesa_code TEXT`.catch(() => {});
+}
+
 // ── POST /api/payments/mpesa-stk ─────────────────────────────────────────────
 // Customer-triggered STK push (pay-now before service)
 async function handleMpesaStk(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const auth = requireAuth(req, res);
   if (!auth) return;
+
+  await runMigrations();
 
   const { bookingId, phone } = req.body;
   if (!bookingId || !phone) return res.status(400).json({ error: 'bookingId and phone are required' });
@@ -301,6 +317,8 @@ async function handleMpesaStkPickup(req: VercelRequest, res: VercelResponse) {
   if (!auth || auth.role !== 'customer') {
     return res.status(403).json({ error: 'Only customers can initiate pickup payment' });
   }
+
+  await runMigrations();
 
   const { bookingId, phone } = req.body;
   if (!bookingId || !phone) return res.status(400).json({ error: 'bookingId and phone are required' });

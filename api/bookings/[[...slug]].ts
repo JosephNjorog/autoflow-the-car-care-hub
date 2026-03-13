@@ -79,6 +79,10 @@ async function handleIndex(req: VercelRequest, res: VercelResponse) {
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS escrow_released_at TIMESTAMPTZ`.catch(() => {});
   await sql`CREATE TABLE IF NOT EXISTS owner_staff (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT NOT NULL, owner_id UUID REFERENCES users(id) ON DELETE CASCADE, created_at TIMESTAMPTZ DEFAULT NOW())`.catch(() => {});
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS staff_id UUID REFERENCES owner_staff(id) ON DELETE SET NULL`.catch(() => {});
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS crypto_wallet TEXT`.catch(() => {});
+  await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS mpesa_checkout_request_id TEXT`.catch(() => {});
+  await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS mpesa_merchant_request_id TEXT`.catch(() => {});
+  await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS mpesa_code TEXT`.catch(() => {});
 
   if (req.method === 'GET') {
     // Auto-release escrow: bookings awaiting confirmation >2 hours → auto-complete + release

@@ -109,7 +109,7 @@ const shippedItems = [
     gradient: 'from-red-500 to-orange-500',
     glow: 'shadow-red-500/20',
     category: 'Smart Contract',
-    title: 'AutoFlowPayments Contract',
+    title: 'AutoPayKePayments Contract',
     description: 'Solidity 0.8.20 smart contract on Avalanche C-Chain — atomic 90/10 token split with payWithToken and payWithAVAX. Hardhat deploy + SnowTrace verification.',
   },
   {

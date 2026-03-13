@@ -170,7 +170,7 @@ export default function RegisterPage() {
 
                     <div className="space-y-2">
                       <Label>Business Name <span className="text-destructive">*</span></Label>
-                      <Input placeholder="e.g. Westlands AutoFlow" value={businessName} onChange={e => setBusinessName(e.target.value)} />
+                      <Input placeholder="e.g. Westlands AutoPayKe" value={businessName} onChange={e => setBusinessName(e.target.value)} />
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">

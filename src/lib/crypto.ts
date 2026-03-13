@@ -274,6 +274,7 @@ export async function runCryptoPayment(
   callbacks: CryptoPaymentCallbacks,
   walletType: PaymentWalletType = 'injected',
   ownerWallet?: string,
+  bookingId?: string,
 ): Promise<string> {
   const autoflowWallet = import.meta.env.VITE_AUTOFLOW_WALLET as string;
 
@@ -291,7 +292,9 @@ export async function runCryptoPayment(
 
   callbacks.onStep('signing');
   const effectiveOwnerWallet = ownerWallet || autoflowWallet;
-  const txHash = await sendSplitPaymentInjected(token, usdAmount, autoflowWallet, effectiveOwnerWallet);
+  const txHash = await sendSplitPaymentInjected(
+    token, usdAmount, autoflowWallet, effectiveOwnerWallet, bookingId || 'unknown',
+  );
 
   callbacks.onStep('confirming');
   await new Promise(r => setTimeout(r, 800));

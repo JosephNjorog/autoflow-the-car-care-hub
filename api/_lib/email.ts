@@ -486,8 +486,8 @@ export async function sendLoyaltyMilestoneEmail(
   await transporter.sendMail({
     from: FROM,
     to: email,
-    subject: `AutoFlow — You've earned ${milestone} loyalty points! 🌟`,
-    html: emailLayout(content, `Congrats! You've reached ${milestone} loyalty points on AutoFlow.`),
+    subject: `AutoPayKe — You've earned ${milestone} loyalty points! 🌟`,
+    html: emailLayout(content, `Congrats! You've reached ${milestone} loyalty points on AutoPayKe.`),
   });
 }
 
@@ -509,7 +509,7 @@ export async function sendNotificationEmail(
   await transporter.sendMail({
     from: FROM,
     to: email,
-    subject: `AutoFlow — ${title}`,
+    subject: `AutoPayKe — ${title}`,
     html: emailLayout(content),
   });
 }

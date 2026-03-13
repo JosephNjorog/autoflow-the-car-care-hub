@@ -330,7 +330,7 @@ async function handleMpesaStkPickup(req: VercelRequest, res: VercelResponse) {
       normalisePhone(phone as string),
       Math.ceil(parseFloat(booking.price as string)),
       bookingId as string,
-      `AutoFlow Pickup: ${booking.service_name} at ${booking.location_name}`,
+      `AutoPayKe Pickup: ${booking.service_name} at ${booking.location_name}`,
     );
 
     await sql`

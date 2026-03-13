@@ -182,7 +182,7 @@ export async function sendOwnerPendingEmail(email: string, firstName: string): P
   await transporter.sendMail({
     from: FROM,
     to: email,
-    subject: 'AutoFlow — Your application is under review',
+    subject: 'AutoPayKe — Your application is under review',
     html: emailLayout(content, 'We received your business owner application and are reviewing it now.'),
   });
 }

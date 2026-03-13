@@ -47,6 +47,11 @@ export function normalisePhone(phone: string): string {
   return p;
 }
 
+/** Strip XML-unsafe characters so Daraja's XSLT pipeline doesn't choke on e.g. "Oil & Filter" */
+function sanitiseDaraja(s: string): string {
+  return s.replace(/&/g, 'and').replace(/[<>"']/g, '').slice(0, 100);
+}
+
 // ── STK Push ─────────────────────────────────────────────────────────────────
 export interface StkPushResult {
   checkoutRequestId: string;
@@ -81,8 +86,8 @@ export async function initiateStkPush(
       PartyB:             shortcode,
       PhoneNumber:        phone,
       CallBackURL:        callbackUrl,
-      AccountReference:   `AUTOPAYK-${bookingId.slice(0, 8).toUpperCase()}`,
-      TransactionDesc:    description,
+      AccountReference:   sanitiseDaraja(`AUTOPAYK-${bookingId.slice(0, 8).toUpperCase()}`),
+      TransactionDesc:    sanitiseDaraja(description),
     }),
   });
 
@@ -144,7 +149,7 @@ export async function initiateB2CPayout(
       Amount:              Math.floor(amount),
       PartyA:              shortcode,
       PartyB:              ownerPhone,
-      Remarks:             `AutoPayKe owner payout booking ${bookingId.slice(0, 8)}`,
+      Remarks:             sanitiseDaraja(`AutoPayKe owner payout booking ${bookingId.slice(0, 8)}`),
       QueueTimeOutURL:     `${appUrl}/api/payments/b2c-timeout`,
       ResultURL:           `${appUrl}/api/payments/b2c-result`,
       Occassion:           bookingId.slice(0, 8),

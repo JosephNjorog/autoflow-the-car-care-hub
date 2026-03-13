@@ -286,7 +286,7 @@ export default function OwnerStaff() {
         <TabsContent value="detailers">
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-muted-foreground">
-              Detailers with AutoFlow accounts. They can log in, view their jobs, and track their schedule.
+              Detailers with AutoPayKe accounts. They can log in, view their jobs, and track their schedule.
             </p>
             <Button size="sm" variant="outline" onClick={() => { setInviteOpen(true); resetInvite(); }}>
               <UserPlus className="w-3.5 h-3.5 mr-1" /> Add Detailer

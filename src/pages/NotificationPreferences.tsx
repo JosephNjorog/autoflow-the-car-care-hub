@@ -106,7 +106,7 @@ export default function NotificationPreferences() {
               <div className="p-2 rounded-lg bg-accent/10 text-accent"><Smartphone className="w-5 h-5" /></div>
               <div>
                 <p className="text-sm font-medium text-foreground">Browser Push Notifications</p>
-                <p className="text-xs text-muted-foreground">Allow AutoFlow to send you push notifications</p>
+                <p className="text-xs text-muted-foreground">Allow AutoPayKe to send you push notifications</p>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={() => {

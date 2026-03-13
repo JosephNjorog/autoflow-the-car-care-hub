@@ -381,7 +381,7 @@ export default function OwnerStaff() {
 
               {inviteMode === 'search' ? (
                 <div className="space-y-4 pt-1">
-                  <p className="text-sm text-muted-foreground">Find a detailer who already has an AutoFlow account.</p>
+                  <p className="text-sm text-muted-foreground">Find a detailer who already has an AutoPayKe account.</p>
                   <div className="space-y-2">
                     <Label>Detailer's Email</Label>
                     <div className="flex gap-2">

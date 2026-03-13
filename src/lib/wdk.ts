@@ -124,7 +124,7 @@ export interface WDKPaymentCallbacks {
  *
  * @param token      - 'usdt' or 'usdc'
  * @param usdAmount  - amount in USD (converted to token base units automatically)
- * @param recipient  - AutoFlow payment wallet address
+ * @param recipient  - AutoPayKe payment wallet address
  * @param callbacks  - optional step callbacks for UX feedback
  */
 export async function sendViaWDK(
@@ -137,7 +137,7 @@ export async function sendViaWDK(
   if (!seed) throw new Error('No WDK wallet found. Please create or restore your wallet first.');
 
   if (!recipient || recipient === '0x0000000000000000000000000000000000000000') {
-    throw new Error('AutoFlow payment wallet not configured.');
+    throw new Error('AutoPayKe payment wallet not configured.');
   }
 
   const tokenAddress = token === 'usdt' ? USDT_ADDRESS : USDC_ADDRESS;

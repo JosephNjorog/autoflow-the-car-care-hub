@@ -142,7 +142,8 @@ export default function BookService() {
             parseFloat(usdAmount),
             { onStep: setCryptoStep },
             'injected',
-            selectedLocation?.ownerWalletAddress ?? undefined,
+            booking.ownerCryptoWallet ?? undefined,
+            booking.id,
           );
           setStep('confirmed');
         } catch (cryptoErr) {

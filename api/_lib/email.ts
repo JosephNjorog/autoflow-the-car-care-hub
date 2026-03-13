@@ -248,7 +248,7 @@ export async function sendOwnerRejectedEmail(email: string, firstName: string): 
 export async function sendPasswordReset(email: string, resetUrl: string): Promise<void> {
   const content = `
     <h1>Reset your password</h1>
-    <p>We received a request to reset the password for your AutoFlow account. Click the button below — this link expires in <strong>1 hour</strong>.</p>
+    <p>We received a request to reset the password for your AutoPayKe account. Click the button below — this link expires in <strong>1 hour</strong>.</p>
     <div style="text-align:center;margin:28px 0;">
       <a href="${resetUrl}" class="btn">Reset My Password</a>
     </div>
@@ -261,8 +261,8 @@ export async function sendPasswordReset(email: string, resetUrl: string): Promis
   await transporter.sendMail({
     from: FROM,
     to: email,
-    subject: 'AutoFlow — Reset your password',
-    html: emailLayout(content, 'You requested a password reset for your AutoFlow account.'),
+    subject: 'AutoPayKe — Reset your password',
+    html: emailLayout(content, 'You requested a password reset for your AutoPayKe account.'),
   });
 }
 

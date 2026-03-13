@@ -64,7 +64,7 @@ export async function initiateStkPush(
   const passkey    = process.env.MPESA_PASSKEY!;
   const timestamp  = formatTimestamp();
   const password   = Buffer.from(`${shortcode}${passkey}${timestamp}`).toString('base64');
-  const appUrl     = process.env.NEXT_PUBLIC_APP_URL || 'https://autoflowbuzz.vercel.app';
+  const appUrl     = process.env.NEXT_PUBLIC_APP_URL || 'https://autopayk.vercel.app';
   const callbackUrl = `${appUrl}/api/payments/mpesa-callback`;
 
   const token = await getMpesaAccessToken();
@@ -129,7 +129,7 @@ export async function initiateB2CPayout(
   }
 
   const shortcode = process.env.MPESA_SHORTCODE!;
-  const appUrl    = process.env.NEXT_PUBLIC_APP_URL || 'https://autoflowbuzz.vercel.app';
+  const appUrl    = process.env.NEXT_PUBLIC_APP_URL || 'https://autopayk.vercel.app';
 
   const token = await getMpesaAccessToken();
   const b2cRes = await fetch(`${MPESA_BASE}/mpesa/b2c/v3/paymentrequest`, {

@@ -107,7 +107,7 @@ export async function initiateStkPush(
 
 // ── B2C Payout ────────────────────────────────────────────────────────────────
 /**
- * Sends money from AutoFlow's shortcode to the owner's M-Pesa phone.
+ * Sends money from AutoPayKe's shortcode to the owner's M-Pesa phone.
  * Requires B2C API access to be enabled on the Daraja account.
  * Contact Safaricom Business support to activate B2C for your shortcode.
  *

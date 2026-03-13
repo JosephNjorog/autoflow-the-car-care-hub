@@ -243,40 +243,13 @@ async function handleById(req: VercelRequest, res: VercelResponse, id: string) {
         await sql`UPDATE owner_staff SET total_washes = total_washes + 1 WHERE id = ${booking.staff_id}`;
       }
 
-      // ── Non-blocking B2C payout: 90% to owner's M-Pesa payout phone ──────────
+      // ── Non-blocking B2C payout: 90% to owner's registered M-Pesa ────────────
       sql`
-        SELECT u.mpesa_payout_phone, s.price, s.owner_id
-        FROM bookings b JOIN services s ON s.id = b.service_id JOIN users u ON u.id = s.owner_id
-        WHERE b.id = ${id}
-      `.then(async ([ownerData]) => {
-        if (!ownerData?.mpesa_payout_phone) return; // Owner hasn't set payout phone
-        const ownerShare = Math.floor(parseFloat(ownerData.price as string) * 0.9);
-        const mpesaBase = 'https://sandbox.safaricom.co.ke';
-        const consumerKey = process.env.MPESA_CONSUMER_KEY!;
-        const consumerSecret = process.env.MPESA_CONSUMER_SECRET!;
-        const credentials = Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64');
-        const tokenRes = await fetch(`${mpesaBase}/oauth/v1/generate?grant_type=client_credentials`, {
-          headers: { Authorization: `Basic ${credentials}` },
-        });
-        const tokenData = await tokenRes.json() as { access_token: string };
-        let payoutPhone = (ownerData.mpesa_payout_phone as string).replace(/\s+/g, '').replace(/^0/, '254').replace(/^\+/, '');
-        if (!payoutPhone.startsWith('254')) payoutPhone = '254' + payoutPhone;
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://autoflow.vercel.app';
-        await fetch(`${mpesaBase}/mpesa/b2c/v1/paymentrequest`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenData.access_token}` },
-          body: JSON.stringify({
-            InitiatorName: process.env.MPESA_INITIATOR_NAME,
-            SecurityCredential: process.env.MPESA_SECURITY_CREDENTIAL,
-            CommandID: 'BusinessPayment',
-            Amount: ownerShare,
-            PartyA: process.env.MPESA_SHORTCODE,
-            PartyB: payoutPhone,
-            Remarks: `AutoFlow payout booking ${id.slice(0, 8)}`,
-            QueueTimeOutURL: `${appUrl}/api/payments/b2c-timeout`,
-            ResultURL: `${appUrl}/api/payments/b2c-result`,
-          }),
-        });
+        SELECT s.owner_id, s.price
+        FROM bookings b JOIN services s ON s.id = b.service_id WHERE b.id = ${id}
+      `.then(async ([d]) => {
+        if (!d) return;
+        await payoutOwnerShare(d.owner_id as string, parseFloat(d.price as string), id, sql as never);
       }).catch((err: unknown) => console.error('B2C payout error:', err));
 
       const [updated] = await rawSql(`${BOOKING_QUERY} WHERE b.id = $1`, [id]);

@@ -102,7 +102,7 @@ export default function SettingsPage() {
             <div>
               <h3 className="font-display text-foreground">M-Pesa Payout</h3>
               <p className="text-xs text-muted-foreground mt-1">
-                When a customer confirms service completion, AutoFlow automatically sends <strong>90%</strong> of the payment to this M-Pesa number via Safaricom B2C. AutoFlow retains 10% as platform fee.
+                When a customer confirms service completion, AutoPayKe automatically sends <strong>90%</strong> of the payment to this M-Pesa number via Safaricom B2C. AutoPayKe retains 10% as platform fee.
               </p>
             </div>
             <div className="rounded-lg bg-primary/5 border border-primary/20 p-3 text-xs text-muted-foreground space-y-1">

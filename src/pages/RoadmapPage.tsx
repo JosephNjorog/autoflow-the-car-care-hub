@@ -630,10 +630,10 @@ export default function RoadmapPage() {
             <div className="w-6 h-6 rounded-md bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center">
               <Layers className="w-3 h-3 text-white" />
             </div>
-            <span className="font-medium text-foreground">AutoFlow</span>
-            <span>— The Car Care Hub</span>
+            <span className="font-medium text-foreground">AutoPayKe</span>
+            <span>— Car Care Hub Kenya</span>
           </div>
-          <p>© {new Date().getFullYear()} AutoFlow. Built on Avalanche.</p>
+          <p>© {new Date().getFullYear()} AutoPayKe. Built on Avalanche.</p>
         </div>
       </footer>
     </div>

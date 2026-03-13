@@ -33,17 +33,20 @@ const BOOKING_QUERY = `
     b.scheduled_time::text as scheduled_time,
     c.first_name || ' ' || c.last_name as customer_name,
     c.email as customer_email,
+    c.phone as customer_phone,
     v.make || ' ' || v.model || ' - ' || v.license_plate as vehicle_name,
     s.name as service_name,
     s.price as service_price,
     l.name as location_name,
     d.first_name || ' ' || d.last_name as detailer_name,
-    os.name as staff_name
+    os.name as staff_name,
+    owner.crypto_wallet as owner_crypto_wallet
   FROM bookings b
   JOIN users c ON c.id = b.customer_id
   LEFT JOIN vehicles v ON v.id = b.vehicle_id
   JOIN services s ON s.id = b.service_id
   JOIN locations l ON l.id = b.location_id
+  LEFT JOIN users owner ON owner.id = l.owner_id
   LEFT JOIN users d ON d.id = b.detailer_id
   LEFT JOIN owner_staff os ON os.id = b.staff_id
 `;

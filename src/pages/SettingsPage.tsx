@@ -107,7 +107,7 @@ export default function SettingsPage() {
             </div>
             <div className="rounded-lg bg-primary/5 border border-primary/20 p-3 text-xs text-muted-foreground space-y-1">
               <p className="font-medium text-foreground">How it works</p>
-              <p>1. Customer books and pays via M-Pesa → funds held in AutoFlow escrow</p>
+              <p>1. Customer books and pays via M-Pesa → funds held in AutoPayKe escrow</p>
               <p>2. Your detailer marks job "Ready" → customer notified to confirm</p>
               <p>3. Customer confirms pickup → 90% auto-sent to your M-Pesa below</p>
               <p>4. If customer doesn't confirm in 2 hours → payment auto-released</p>

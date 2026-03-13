@@ -136,7 +136,7 @@ export async function initiateB2CPayout(
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({
-      OriginatorConversationID: `AUTOFLOW-PAYOUT-${bookingId.slice(0, 8).toUpperCase()}-${Date.now()}`,
+      OriginatorConversationID: `AUTOPAYK-PAYOUT-${bookingId.slice(0, 8).toUpperCase()}-${Date.now()}`,
       InitiatorName:       initiatorName,
       SecurityCredential:  securityCredential,
       CommandID:           'BusinessPayment',

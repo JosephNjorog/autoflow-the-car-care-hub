@@ -381,7 +381,7 @@ export default function RoadmapPage() {
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-              The AutoFlow{' '}
+              The AutoPayKe{' '}
               <span className="bg-gradient-to-r from-sky-500 to-blue-600 bg-clip-text text-transparent">
                 Product Roadmap
               </span>
@@ -601,7 +601,7 @@ export default function RoadmapPage() {
           >
             <h2 className="text-2xl sm:text-3xl font-bold mb-4">Ready to get started?</h2>
             <p className="text-muted-foreground mb-8">
-              AutoFlow is live today. Book a car wash, manage your detailing business, or join as a partner.
+              AutoPayKe is live today. Book a car wash, manage your detailing business, or join as a partner.
             </p>
             <div className="flex flex-wrap justify-center gap-3">
               <Link

@@ -81,7 +81,7 @@ export async function initiateStkPush(
       PartyB:             shortcode,
       PhoneNumber:        phone,
       CallBackURL:        callbackUrl,
-      AccountReference:   `AUTOFLOW-${bookingId.slice(0, 8).toUpperCase()}`,
+      AccountReference:   `AUTOPAYK-${bookingId.slice(0, 8).toUpperCase()}`,
       TransactionDesc:    description,
     }),
   });

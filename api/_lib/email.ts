@@ -165,7 +165,7 @@ export async function sendWelcomeEmail(
 export async function sendOwnerPendingEmail(email: string, firstName: string): Promise<void> {
   const content = `
     <h1>Application Received, ${firstName}</h1>
-    <p>Thank you for applying to join AutoFlow as a Business Owner. We've received your application and KYC documents.</p>
+    <p>Thank you for applying to join AutoPayKe as a Business Owner. We've received your application and KYC documents.</p>
     <div class="alert-box">
       <p><strong>⏳ Under Review</strong><br /><br />Our team typically reviews applications within <strong>1–2 business days</strong>. We'll email you as soon as a decision is made.</p>
     </div>

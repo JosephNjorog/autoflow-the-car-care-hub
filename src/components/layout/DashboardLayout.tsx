@@ -112,7 +112,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center justify-between p-5 border-b border-sidebar-border">
             <Link to="/" className="flex items-center gap-2">
               <Droplets className="w-7 h-7 text-sidebar-primary" />
-              <span className="font-display text-xl text-sidebar-foreground">AutoFlow</span>
+              <span className="font-display text-xl text-sidebar-foreground">AutoPayKe</span>
             </Link>
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-sidebar-foreground/60 hover:text-sidebar-foreground"><X className="w-5 h-5" /></button>
           </div>

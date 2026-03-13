@@ -37,7 +37,7 @@ function LocationForm({ f, setF, detecting, onDetect, onSave, saving, saveLabel 
         <Label htmlFor="loc-name">Location Name</Label>
         <Input
           id="loc-name"
-          placeholder="e.g. AutoFlow Westlands"
+          placeholder="e.g. AutoPayKe Westlands"
           value={f.name}
           onChange={e => setF(p => ({ ...p, name: e.target.value }))}
         />

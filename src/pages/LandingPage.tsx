@@ -1,26 +1,26 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Droplets, Star, Shield, Zap, ArrowRight, CheckCircle,
   MapPin, Award, TrendingUp, Car, CreditCard, Wallet, Smartphone,
-  Bot, Activity, Code2, Users, ChevronRight, BadgeCheck, Cpu,
+  Bot, Activity, Users, ChevronRight, BadgeCheck, Cpu,
+  Building2, Wrench, ChevronLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
-// ─── Images (from prototype) ────────────────────────────────────────────────
+// ─── Images ─────────────────────────────────────────────────────────────────
 const IMG = {
   hero:       'https://autopayke.lovable.app/assets/hero-car-DMSUyPsx.jpeg',
   economy:    'https://autopayke.lovable.app/assets/tier-economy-CYy0Teks.jpeg',
   firstClass: 'https://autopayke.lovable.app/assets/tier-firstclass-BtC3u5ET.jpeg',
   premium:    'https://autopayke.lovable.app/assets/tier-premium-D6jxk9Yj.jpeg',
   nearbyMap:  'https://autopayke.lovable.app/assets/nearby-wash-map-XMf7XkSX.jpeg',
-  nearbyPhone:'https://autopayke.lovable.app/assets/nearby-wash-phone-D-DKWhrr.jpeg',
 };
 
-// ─── Data ───────────────────────────────────────────────────────────────────
+// ─── Data ────────────────────────────────────────────────────────────────────
 
 const marqueeItems = [
   'Service Discovery', 'M-Pesa Payments', 'Proof-of-Service', 'Loyalty Rewards',
@@ -57,54 +57,349 @@ const operatorFeatures = [
   { icon: <Award className="w-5 h-5" />, title: 'Loyalty Tools', desc: 'Digital stamps, tier rewards, and automated win-back campaigns to keep customers returning.' },
 ];
 
-const driverFeatures = [
+const carOwnerFeatures = [
   { icon: <MapPin className="w-5 h-5" />, title: 'Service Discovery', desc: 'Discover verified car washes near you with real-time availability and pricing.' },
   { icon: <Car className="w-5 h-5" />, title: 'Book a Service', desc: 'Select your wash tier, confirm the booking, and get notified when it\'s done.' },
   { icon: <CheckCircle className="w-5 h-5" />, title: 'Track Your Washes', desc: 'Every wash is recorded with proof-of-service. View your full history anytime.' },
   { icon: <Star className="w-5 h-5" />, title: 'Earn Rewards', desc: 'Customers earn points and tier rewards with every verified wash — no stamps needed.' },
 ];
 
-const ROLES = ['Driver', 'Owner', 'Detailer', 'Developer'] as const;
-const TIERS = ['Economy', 'First Class', 'Premium'] as const;
-
-// ─── Fade-in animation ───────────────────────────────────────────────────────
+// ─── Animation ───────────────────────────────────────────────────────────────
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
-  visible: (delay = 0) => ({ opacity: 1, y: 0, transition: { duration: 0.6, delay, ease: [0.16, 1, 0.3, 1] } }),
+  visible: (d = 0) => ({ opacity: 1, y: 0, transition: { duration: 0.6, delay: d, ease: [0.16, 1, 0.3, 1] as const } }),
 };
 
-// ─── Component ──────────────────────────────────────────────────────────────
+const slideVariants = {
+  enter: (dir: number) => ({ opacity: 0, x: dir > 0 ? 40 : -40 }),
+  center: { opacity: 1, x: 0 },
+  exit: (dir: number) => ({ opacity: 0, x: dir > 0 ? -40 : 40 }),
+};
 
-export default function LandingPage() {
-  const navigate = useNavigate();
+// ─── Waitlist roles ───────────────────────────────────────────────────────────
+const WL_ROLES = [
+  { id: 'car_owner',   label: 'Car Owner',       icon: <Car className="w-5 h-5" />,       desc: 'I want my car washed' },
+  { id: 'owner',       label: 'Business Owner',   icon: <Building2 className="w-5 h-5" />, desc: 'I run a car wash' },
+  { id: 'detailer',    label: 'Detailer',         icon: <Wrench className="w-5 h-5" />,    desc: 'I want to find jobs' },
+] as const;
+
+const WL_TIERS = ['Economy', 'First Class', 'Premium'] as const;
+
+// ─── Multi-step Waitlist ──────────────────────────────────────────────────────
+function WaitlistForm() {
   const { toast } = useToast();
+  const [step, setStep] = useState(0);      // 0 = role, 1 = details, 2 = done
+  const [direction, setDirection] = useState(1);
 
-  const [wlName, setWlName] = useState('');
-  const [wlEmail, setWlEmail] = useState('');
-  const [wlPhone, setWlPhone] = useState('');
-  const [wlRole, setWlRole] = useState<string>('Driver');
-  const [wlTier, setWlTier] = useState<string>('');
-  const [wlLoading, setWlLoading] = useState(false);
-  const [wlDone, setWlDone] = useState(false);
+  const [role, setRole] = useState<string>('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [tier, setTier] = useState('');
+  // Business-owner specific
+  const [bizName, setBizName] = useState('');
+  const [bizLocation, setBizLocation] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleWaitlist = async (e: React.FormEvent) => {
+  const go = (next: number) => {
+    setDirection(next > step ? 1 : -1);
+    setStep(next);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!wlEmail) return;
-    setWlLoading(true);
+    if (!email) return;
+    setLoading(true);
     try {
       await api.post('/auth/waitlist', {
-        name: wlName || null,
-        email: wlEmail,
-        phone: wlPhone || null,
-        role: wlRole.toLowerCase().replace(' ', '_'),
-        tier: wlTier ? wlTier.toLowerCase().replace(' ', '_') : null,
+        name: name || null,
+        email,
+        phone: phone || null,
+        role,
+        tier: tier ? tier.toLowerCase().replace(' ', '_') : null,
+        metadata: role === 'owner' ? { bizName, bizLocation } : undefined,
       });
-      setWlDone(true);
+      setDirection(1);
+      setStep(2);
     } catch {
       toast({ title: 'Already registered', description: 'This email is already on the waitlist.', variant: 'destructive' });
     } finally {
-      setWlLoading(false);
+      setLoading(false);
     }
+  };
+
+  const transition = { duration: 0.35, ease: [0.16, 1, 0.3, 1] as const };
+
+  return (
+    <div className="rounded-2xl border border-border bg-card overflow-hidden">
+      {/* Progress bar */}
+      {step < 2 && (
+        <div className="h-0.5 bg-border">
+          <motion.div
+            className="h-full bg-foreground"
+            animate={{ width: step === 0 ? '50%' : '100%' }}
+            transition={transition}
+          />
+        </div>
+      )}
+
+      <div className="p-6 md:p-8 min-h-[340px] flex flex-col">
+        <AnimatePresence mode="wait" custom={direction}>
+          {/* ── Step 0: Role selection ── */}
+          {step === 0 && (
+            <motion.div
+              key="step-role"
+              custom={direction}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={transition}
+              className="flex flex-col flex-1"
+            >
+              <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground mb-2">Step 1 of 2</p>
+              <h3 className="text-xl font-bold text-foreground mb-6">I want to join as a…</h3>
+              <div className="space-y-3 flex-1">
+                {WL_ROLES.map(r => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setRole(r.id)}
+                    className={`w-full flex items-center gap-4 p-4 rounded-xl border text-left transition-all duration-200 ${
+                      role === r.id
+                        ? 'border-foreground bg-foreground/5'
+                        : 'border-border hover:border-foreground/30'
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                      role === r.id ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground'
+                    }`}>
+                      {r.icon}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground">{r.label}</p>
+                      <p className="text-sm text-muted-foreground">{r.desc}</p>
+                    </div>
+                    {role === r.id && (
+                      <CheckCircle className="w-4 h-4 text-foreground ml-auto shrink-0" />
+                    )}
+                  </button>
+                ))}
+              </div>
+              <Button
+                className="w-full mt-6 h-12 bg-foreground text-background hover:bg-foreground/90 rounded-xl font-semibold"
+                disabled={!role}
+                onClick={() => go(1)}
+              >
+                Continue <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </motion.div>
+          )}
+
+          {/* ── Step 1: Details (varies by role) ── */}
+          {step === 1 && (
+            <motion.div
+              key="step-details"
+              custom={direction}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={transition}
+              className="flex flex-col flex-1"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <button onClick={() => go(0)} className="text-muted-foreground hover:text-foreground transition-colors">
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Step 2 of 2</p>
+              </div>
+
+              {role === 'car_owner' && (
+                <h3 className="text-xl font-bold text-foreground mb-6">Tell us about yourself</h3>
+              )}
+              {role === 'owner' && (
+                <h3 className="text-xl font-bold text-foreground mb-6">About your car wash</h3>
+              )}
+              {role === 'detailer' && (
+                <h3 className="text-xl font-bold text-foreground mb-6">Your details</h3>
+              )}
+
+              <form onSubmit={handleSubmit} className="flex flex-col flex-1 gap-4">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">Name</label>
+                    <input
+                      type="text"
+                      placeholder="Your name"
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/40 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">Phone</label>
+                    <input
+                      type="tel"
+                      placeholder="+254..."
+                      value={phone}
+                      onChange={e => setPhone(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/40 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
+                    Email <span className="text-foreground/40">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/40 transition-colors"
+                  />
+                </div>
+
+                {/* Car owner: tier preference */}
+                {role === 'car_owner' && (
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                      Preferred wash tier <span className="normal-case text-muted-foreground/40">(optional)</span>
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {WL_TIERS.map(t => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setTier(tier === t ? '' : t)}
+                          className={`px-3 py-2.5 rounded-xl text-sm font-medium border transition-all duration-200 ${
+                            tier === t
+                              ? 'border-foreground bg-foreground text-background'
+                              : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground'
+                          }`}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Business owner: extra fields */}
+                {role === 'owner' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">Business name</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Westlands Premium Car Wash"
+                        value={bizName}
+                        onChange={e => setBizName(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/40 transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">Location</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Westlands, Nairobi"
+                        value={bizLocation}
+                        onChange={e => setBizLocation(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/40 transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Tiers you offer</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {WL_TIERS.map(t => (
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={() => setTier(tier === t ? '' : t)}
+                            className={`px-3 py-2.5 rounded-xl text-sm font-medium border transition-all duration-200 ${
+                              tier === t
+                                ? 'border-foreground bg-foreground text-background'
+                                : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground'
+                            }`}
+                          >
+                            {t}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div className="mt-auto pt-2">
+                  <Button
+                    type="submit"
+                    disabled={loading || !email}
+                    className="w-full h-12 bg-foreground text-background hover:bg-foreground/90 font-semibold rounded-xl text-base"
+                  >
+                    {loading ? 'Joining...' : 'Join the Waitlist'} {!loading && <ArrowRight className="w-4 h-4 ml-2" />}
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center mt-3">
+                    No spam. We'll only reach out when we launch in your area.
+                  </p>
+                </div>
+              </form>
+            </motion.div>
+          )}
+
+          {/* ── Step 2: Done ── */}
+          {step === 2 && (
+            <motion.div
+              key="step-done"
+              custom={direction}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={transition}
+              className="flex flex-col items-center justify-center flex-1 text-center py-8"
+            >
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.1, type: 'spring', stiffness: 300, damping: 20 }}
+                className="w-16 h-16 rounded-full border border-success/30 bg-success/10 flex items-center justify-center mb-5"
+              >
+                <CheckCircle className="w-8 h-8 text-success" />
+              </motion.div>
+              <h3 className="text-2xl font-bold text-foreground mb-2">You're on the list.</h3>
+              {role === 'owner' && (
+                <p className="text-muted-foreground text-sm max-w-xs">
+                  We'll be in touch to help you list <strong className="text-foreground">{bizName || 'your car wash'}</strong> on AutoPayKe.
+                </p>
+              )}
+              {role === 'car_owner' && (
+                <p className="text-muted-foreground text-sm max-w-xs">
+                  We'll notify you the moment{tier ? ` ${tier}` : ''} services are available near you.
+                </p>
+              )}
+              {role === 'detailer' && (
+                <p className="text-muted-foreground text-sm max-w-xs">
+                  We'll reach out when we're ready to onboard detailers in your area.
+                </p>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+
+export default function LandingPage() {
+  const navigate = useNavigate();
+
+  const scrollToWaitlist = () => {
+    document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
@@ -113,7 +408,6 @@ export default function LandingPage() {
       {/* ── Navigation ──────────────────────────────────────────────────────── */}
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-5 md:px-8 h-16">
-          {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-foreground flex items-center justify-center">
               <Droplets className="w-4 h-4 text-background" />
@@ -121,21 +415,27 @@ export default function LandingPage() {
             <span className="text-base font-semibold tracking-tight text-foreground">AutoPayKe</span>
           </Link>
 
-          {/* Nav links */}
           <div className="hidden md:flex items-center gap-7 text-sm text-muted-foreground">
             <a href="#tiers" className="hover:text-foreground transition-colors duration-200">Tiers</a>
             <a href="#operators" className="hover:text-foreground transition-colors duration-200">For Operators</a>
-            <a href="#drivers" className="hover:text-foreground transition-colors duration-200">For Drivers</a>
-            <a href="#developers" className="hover:text-foreground transition-colors duration-200">Developers</a>
+            <a href="#car-owners" className="hover:text-foreground transition-colors duration-200">For Car Owners</a>
             <Link to="/roadmap" className="hover:text-foreground transition-colors duration-200">Roadmap</Link>
           </div>
 
-          {/* CTAs */}
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => navigate('/login')}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={() => navigate('/login')}
+            >
               Sign in
             </Button>
-            <Button size="sm" className="bg-foreground text-background hover:bg-foreground/90 font-medium" onClick={() => navigate('/register')}>
+            <Button
+              size="sm"
+              className="bg-foreground text-background hover:bg-foreground/90 font-medium"
+              onClick={() => navigate('/register')}
+            >
               Get Started
             </Button>
           </div>
@@ -144,7 +444,6 @@ export default function LandingPage() {
 
       {/* ── Hero ────────────────────────────────────────────────────────────── */}
       <section className="relative min-h-screen flex items-end pb-24 md:pb-32 overflow-hidden">
-        {/* Full-bleed background image */}
         <div className="absolute inset-0">
           <img
             src={IMG.hero}
@@ -152,7 +451,6 @@ export default function LandingPage() {
             className="w-full h-full object-cover"
             loading="eager"
           />
-          {/* Gradient overlays */}
           <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/40 to-background" />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
         </div>
@@ -164,7 +462,6 @@ export default function LandingPage() {
             variants={{ visible: { transition: { staggerChildren: 0.12 } } }}
             className="max-w-4xl"
           >
-            {/* Badge */}
             <motion.div variants={fadeUp} custom={0} className="mb-6">
               <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-border text-xs font-medium text-muted-foreground">
                 <span className="w-1.5 h-1.5 rounded-full bg-foreground/60 animate-pulse" />
@@ -172,7 +469,6 @@ export default function LandingPage() {
               </span>
             </motion.div>
 
-            {/* Headline */}
             <motion.h1
               variants={fadeUp}
               custom={0.1}
@@ -181,16 +477,14 @@ export default function LandingPage() {
               Book. Wash.<br />Track. Earn.
             </motion.h1>
 
-            {/* Subtitle */}
             <motion.p
               variants={fadeUp}
               custom={0.2}
               className="text-base md:text-lg text-muted-foreground max-w-xl leading-relaxed mb-10"
             >
-              AutoPayKe connects drivers to verified car washes nearby while giving operators the tools to verify services, automate payments, and reward loyalty.
+              AutoPayKe connects car owners to verified car washes nearby while giving operators the tools to verify services, automate payments, and reward loyalty.
             </motion.p>
 
-            {/* CTA buttons */}
             <motion.div variants={fadeUp} custom={0.3} className="flex flex-col sm:flex-row gap-3">
               <Button
                 size="lg"
@@ -203,7 +497,7 @@ export default function LandingPage() {
                 size="lg"
                 variant="outline"
                 className="border-border text-foreground hover:bg-accent font-medium px-7 text-base h-12 rounded-xl"
-                onClick={() => navigate('/register?role=owner')}
+                onClick={scrollToWaitlist}
               >
                 Register Car Wash <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
@@ -250,13 +544,12 @@ export default function LandingPage() {
             <motion.p variants={fadeUp} className="text-base text-muted-foreground max-w-lg leading-relaxed mb-14">
               Kenya's car wash industry is growing fast — but the infrastructure hasn't kept up. No digital payments, no service records, no loyalty programs.
             </motion.p>
-
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { stat: '10M+',  label: 'Registered vehicles in Kenya' },
-                { stat: '40K+',  label: 'Car wash businesses nationwide' },
-                { stat: '95%',   label: 'Still cash-only operations' },
-                { stat: '0',     label: 'With digital loyalty programs' },
+                { stat: '10M+', label: 'Registered vehicles in Kenya' },
+                { stat: '40K+', label: 'Car wash businesses nationwide' },
+                { stat: '95%',  label: 'Still cash-only operations' },
+                { stat: '0',    label: 'With digital loyalty programs' },
               ].map((s, i) => (
                 <motion.div
                   key={i}
@@ -305,9 +598,8 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-60px' }}
                 transition={{ delay: i * 0.12, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                className="group relative rounded-2xl overflow-hidden border border-border bg-card cursor-pointer"
+                className="group relative rounded-2xl overflow-hidden border border-border bg-card"
               >
-                {/* Image */}
                 <div className="relative h-60 overflow-hidden">
                   <img
                     src={tier.image}
@@ -316,8 +608,6 @@ export default function LandingPage() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
                 </div>
-
-                {/* Content */}
                 <div className="p-6">
                   <div className="flex items-baseline justify-between mb-4">
                     <h3 className="text-xl font-semibold text-foreground">{tier.name}</h3>
@@ -342,8 +632,6 @@ export default function LandingPage() {
       <section id="operators" className="py-28 md:py-36 border-t border-border">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-start">
-
-            {/* Left: copy */}
             <motion.div
               initial="hidden"
               whileInView="visible"
@@ -362,15 +650,9 @@ export default function LandingPage() {
               <motion.p variants={fadeUp} className="text-base text-muted-foreground leading-relaxed mb-12 max-w-md">
                 AutoPayKe gives operators the tools to verify services, automate payments, track revenue, and reward loyalty — all from one dashboard.
               </motion.p>
-
               <div className="space-y-0 border-t border-border">
                 {operatorFeatures.map((f, i) => (
-                  <motion.div
-                    key={i}
-                    variants={fadeUp}
-                    custom={i * 0.08}
-                    className="flex gap-5 py-6 border-b border-border"
-                  >
+                  <motion.div key={i} variants={fadeUp} custom={i * 0.08} className="flex gap-5 py-6 border-b border-border">
                     <div className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground shrink-0 mt-0.5">
                       {f.icon}
                     </div>
@@ -381,19 +663,18 @@ export default function LandingPage() {
                   </motion.div>
                 ))}
               </div>
-
               <motion.div variants={fadeUp} className="mt-8">
                 <Button
                   size="lg"
                   className="bg-foreground text-background hover:bg-foreground/90 font-semibold rounded-xl h-12"
-                  onClick={() => navigate('/register?role=owner')}
+                  onClick={scrollToWaitlist}
                 >
                   Register Your Wash <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </motion.div>
             </motion.div>
 
-            {/* Right: dashboard mockup */}
+            {/* Dashboard mockup */}
             <motion.div
               initial={{ opacity: 0, x: 24 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -402,7 +683,6 @@ export default function LandingPage() {
               className="sticky top-24"
             >
               <div className="rounded-2xl border border-border bg-card overflow-hidden">
-                {/* Browser chrome */}
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
                   <div className="w-2.5 h-2.5 rounded-full bg-muted" />
                   <div className="w-2.5 h-2.5 rounded-full bg-muted" />
@@ -410,7 +690,6 @@ export default function LandingPage() {
                   <div className="ml-3 flex-1 bg-muted rounded-md h-5" />
                 </div>
                 <div className="p-5 space-y-4">
-                  {/* Stats row */}
                   <div className="grid grid-cols-2 gap-3">
                     {[
                       { label: "Today's Revenue", value: 'KES 18,400', delta: '+12%' },
@@ -427,7 +706,6 @@ export default function LandingPage() {
                       </div>
                     ))}
                   </div>
-                  {/* Bookings list */}
                   <div className="rounded-xl bg-background border border-border overflow-hidden">
                     <div className="px-4 py-3 border-b border-border">
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Recent Bookings</p>
@@ -444,14 +722,13 @@ export default function LandingPage() {
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-semibold text-foreground">{b.amount}</p>
-                          <p className={`text-[10px] font-medium ${b.done === true ? 'text-success' : b.done === false ? 'text-muted-foreground' : 'text-muted-foreground/60'}`}>
+                          <p className={`text-[10px] font-medium ${b.done === true ? 'text-success' : 'text-muted-foreground/60'}`}>
                             {b.done === true ? 'completed' : b.done === false ? 'in progress' : 'pending'}
                           </p>
                         </div>
                       </div>
                     ))}
                   </div>
-                  {/* Earnings card */}
                   <div className="flex items-center justify-between p-4 rounded-xl bg-foreground text-background">
                     <div>
                       <p className="text-xs text-background/60 mb-1">This Month</p>
@@ -469,12 +746,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── For Drivers ─────────────────────────────────────────────────────── */}
-      <section id="drivers" className="py-28 md:py-36 border-t border-border">
+      {/* ── For Car Owners ──────────────────────────────────────────────────── */}
+      <section id="car-owners" className="py-28 md:py-36 border-t border-border">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-start">
-
-            {/* Left: phone mockup */}
+            {/* Phone mockup */}
             <motion.div
               initial={{ opacity: 0, x: -24 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -483,7 +759,7 @@ export default function LandingPage() {
               className="sticky top-24 order-2 lg:order-1"
             >
               <div className="rounded-2xl border border-border bg-card overflow-hidden">
-                <div className="relative h-56 overflow-hidden">
+                <div className="relative h-52 overflow-hidden">
                   <img src={IMG.nearbyMap} alt="Nearby car washes map" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent to-card" />
                 </div>
@@ -509,7 +785,6 @@ export default function LandingPage() {
                       <p className="text-sm font-semibold text-foreground">{w.price}</p>
                     </div>
                   ))}
-                  {/* M-Pesa prompt */}
                   <motion.div
                     animate={{ opacity: [0.7, 1, 0.7] }}
                     transition={{ duration: 2, repeat: Infinity }}
@@ -525,7 +800,7 @@ export default function LandingPage() {
               </div>
             </motion.div>
 
-            {/* Right: copy */}
+            {/* Copy */}
             <motion.div
               initial="hidden"
               whileInView="visible"
@@ -534,7 +809,7 @@ export default function LandingPage() {
               className="order-1 lg:order-2"
             >
               <motion.p variants={fadeUp} className="text-xs uppercase tracking-[0.15em] text-muted-foreground mb-5">
-                For Drivers
+                For Car Owners
               </motion.p>
               <motion.h2
                 variants={fadeUp}
@@ -545,15 +820,9 @@ export default function LandingPage() {
               <motion.p variants={fadeUp} className="text-base text-muted-foreground leading-relaxed mb-12 max-w-md">
                 Find nearby car washes, book a service, track every wash, and earn rewards — all from your phone.
               </motion.p>
-
               <div className="space-y-0 border-t border-border">
-                {driverFeatures.map((f, i) => (
-                  <motion.div
-                    key={i}
-                    variants={fadeUp}
-                    custom={i * 0.08}
-                    className="flex gap-5 py-6 border-b border-border"
-                  >
+                {carOwnerFeatures.map((f, i) => (
+                  <motion.div key={i} variants={fadeUp} custom={i * 0.08} className="flex gap-5 py-6 border-b border-border">
                     <div className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground shrink-0 mt-0.5">
                       {f.icon}
                     </div>
@@ -564,7 +833,6 @@ export default function LandingPage() {
                   </motion.div>
                 ))}
               </div>
-
               <motion.div variants={fadeUp} className="mt-8">
                 <Button
                   size="lg"
@@ -583,7 +851,6 @@ export default function LandingPage() {
       <section className="py-28 md:py-36 border-t border-border">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
-
             <motion.div
               initial="hidden"
               whileInView="visible"
@@ -603,14 +870,13 @@ export default function LandingPage() {
                 AutoPayKe introduces a Proof-of-Service protocol for real-world services — verifying every wash, automating every payment, and rewarding every customer.
               </motion.p>
               <motion.p variants={fadeUp} className="text-base text-muted-foreground leading-relaxed mb-12 max-w-md">
-                AutoPayKe turns every car wash into a verified, trackable, and intelligent transaction. Every completed wash generates a tamper-proof digital record. Payments are released automatically upon verification — no disputes, no delays.
+                Every completed wash generates a tamper-proof digital record. Payments are released automatically upon verification — no disputes, no delays.
               </motion.p>
-
               <div className="space-y-4">
                 {[
-                  { icon: <Shield className="w-4 h-4" />,   title: 'Tamper-proof records',     desc: 'Each completed wash generates a digital proof-of-service record.' },
-                  { icon: <Zap className="w-4 h-4" />,      title: 'Automated settlement',      desc: 'Payments are released automatically upon service verification.' },
-                  { icon: <Activity className="w-4 h-4" />, title: 'Real-time tracking',        desc: 'Customers and operators track every step in real time.' },
+                  { icon: <Shield className="w-4 h-4" />,   title: 'Tamper-proof records',  desc: 'Each completed wash generates a digital proof-of-service record.' },
+                  { icon: <Zap className="w-4 h-4" />,      title: 'Automated settlement',   desc: 'Payments are released automatically upon service verification.' },
+                  { icon: <Activity className="w-4 h-4" />, title: 'Real-time tracking',     desc: 'Customers and operators track every step in real time.' },
                 ].map((item, i) => (
                   <motion.div key={i} variants={fadeUp} custom={i * 0.08} className="flex items-start gap-4">
                     <div className="w-8 h-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground shrink-0">
@@ -625,7 +891,6 @@ export default function LandingPage() {
               </div>
             </motion.div>
 
-            {/* Service record card */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -643,15 +908,15 @@ export default function LandingPage() {
                 </div>
                 <div className="space-y-3 text-sm">
                   {[
-                    { label: 'Service',    value: 'Premium Detail' },
-                    { label: 'Location',   value: 'Westlands Centre' },
-                    { label: 'Amount',     value: 'KES 3,200' },
-                    { label: 'Payment',    value: 'M-Pesa confirmed', success: true },
-                    { label: 'Points',     value: '+320 pts earned' },
+                    { label: 'Service',  value: 'Premium Detail' },
+                    { label: 'Location', value: 'Westlands Centre' },
+                    { label: 'Amount',   value: 'KES 3,200' },
+                    { label: 'Payment',  value: 'M-Pesa confirmed', success: true },
+                    { label: 'Points',   value: '+320 pts earned' },
                   ].map((row, i) => (
                     <div key={i} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                       <span className="text-muted-foreground">{row.label}</span>
-                      <span className={`font-medium ${row.success ? 'text-success' : 'text-foreground'} flex items-center gap-1`}>
+                      <span className={`font-medium flex items-center gap-1 ${row.success ? 'text-success' : 'text-foreground'}`}>
                         {row.success && <BadgeCheck className="w-3.5 h-3.5" />}
                         {row.value}
                       </span>
@@ -659,7 +924,7 @@ export default function LandingPage() {
                   ))}
                 </div>
                 <div className="mt-5 pt-4 border-t border-border">
-                  <p className="text-[10px] font-mono text-muted-foreground/60 break-all">
+                  <p className="text-[10px] font-mono text-muted-foreground/50 break-all">
                     proof: 0x4a2f...8c1e · Avalanche C-Chain · Block #28,491,044
                   </p>
                 </div>
@@ -669,15 +934,13 @@ export default function LandingPage() {
                 <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground mb-4">Accepted Payments</p>
                 <div className="grid grid-cols-2 gap-2.5">
                   {[
-                    { icon: <Smartphone className="w-4 h-4" />, label: 'M-Pesa',  sub: 'Recommended' },
-                    { icon: <Wallet className="w-4 h-4" />,     label: 'USDT',    sub: 'Avalanche C-Chain' },
-                    { icon: <Wallet className="w-4 h-4" />,     label: 'USDC',    sub: 'Avalanche C-Chain' },
-                    { icon: <CreditCard className="w-4 h-4" />, label: 'Cash',    sub: 'Pay on arrival' },
+                    { icon: <Smartphone className="w-4 h-4" />, label: 'M-Pesa', sub: 'Recommended' },
+                    { icon: <Wallet className="w-4 h-4" />,     label: 'USDT',   sub: 'Avalanche C-Chain' },
+                    { icon: <Wallet className="w-4 h-4" />,     label: 'USDC',   sub: 'Avalanche C-Chain' },
+                    { icon: <CreditCard className="w-4 h-4" />, label: 'Cash',   sub: 'Pay on arrival' },
                   ].map((p, i) => (
                     <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-background border border-border">
-                      <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground shrink-0">
-                        {p.icon}
-                      </div>
+                      <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground shrink-0">{p.icon}</div>
                       <div>
                         <p className="text-sm font-medium text-foreground">{p.label}</p>
                         <p className="text-[10px] text-muted-foreground">{p.sub}</p>
@@ -695,7 +958,6 @@ export default function LandingPage() {
       <section className="py-28 md:py-36 border-t border-border">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
-
             <motion.div
               initial="hidden"
               whileInView="visible"
@@ -704,11 +966,10 @@ export default function LandingPage() {
             >
               <motion.div variants={fadeUp} className="flex items-center gap-3 mb-6">
                 <div className="w-9 h-9 rounded-xl bg-foreground flex items-center justify-center">
-                  <Bot className="w-4.5 h-4.5 text-background" />
+                  <Bot className="w-5 h-5 text-background" />
                 </div>
                 <span className="text-sm font-semibold text-foreground">AutoPayKe Agent</span>
               </motion.div>
-
               <motion.h2
                 variants={fadeUp}
                 className="text-[clamp(2.5rem,5vw,4.5rem)] font-bold tracking-[-0.03em] text-foreground leading-[1.05] mb-5"
@@ -716,11 +977,10 @@ export default function LandingPage() {
                 AI-powered.<br />Always on.
               </motion.h2>
               <motion.p variants={fadeUp} className="text-base text-muted-foreground leading-relaxed max-w-md">
-                AutoPayKe includes an AI-powered assistant that helps drivers and car wash operators discover services, track activity, and optimize operations in real time.
+                AutoPayKe includes an AI-powered assistant that helps car owners and operators discover services, track activity, and optimize operations in real time.
               </motion.p>
             </motion.div>
 
-            {/* Chat mockup */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -768,90 +1028,9 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Developers / API ────────────────────────────────────────────────── */}
-      <section id="developers" className="py-28 md:py-36 border-t border-border">
-        <div className="max-w-7xl mx-auto px-5 md:px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: '-80px' }}
-              variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
-            >
-              <motion.p variants={fadeUp} className="text-xs uppercase tracking-[0.15em] text-muted-foreground mb-5">
-                For Developers
-              </motion.p>
-              <motion.h2
-                variants={fadeUp}
-                className="text-[clamp(2.5rem,5vw,4.5rem)] font-bold tracking-[-0.03em] text-foreground leading-[1.05] mb-5"
-              >
-                Build on AutoPayKe.
-              </motion.h2>
-              <motion.p variants={fadeUp} className="text-base text-muted-foreground leading-relaxed mb-12 max-w-md">
-                Access the protocol, APIs, and integration tools to build on top of the car wash operating system.
-              </motion.p>
-
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { icon: <Code2 className="w-4 h-4" />,    label: 'API Reference',     desc: 'RESTful APIs for service verification, payment processing, and analytics.' },
-                  { icon: <Shield className="w-4 h-4" />,   label: 'Protocol Overview', desc: 'Proof-of-Service protocol documentation and architecture.' },
-                  { icon: <Zap className="w-4 h-4" />,      label: 'Getting Started',   desc: 'Quick start guide — set up and make your first API call in minutes.' },
-                  { icon: <Users className="w-4 h-4" />,    label: 'Security & Compliance', desc: 'Data privacy, encryption standards, and enterprise compliance.' },
-                ].map((item, i) => (
-                  <motion.div
-                    key={i}
-                    variants={fadeUp}
-                    custom={i * 0.08}
-                    className="p-4 rounded-xl border border-border bg-card"
-                  >
-                    <div className="w-8 h-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground mb-3">
-                      {item.icon}
-                    </div>
-                    <p className="text-sm font-semibold text-foreground mb-1">{item.label}</p>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, margin: '-80px' }}
-              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <div className="rounded-2xl border border-border bg-card overflow-hidden">
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/30">
-                  <div className="w-2 h-2 rounded-full bg-muted" />
-                  <div className="w-2 h-2 rounded-full bg-muted" />
-                  <div className="w-2 h-2 rounded-full bg-muted" />
-                  <span className="ml-2 text-xs font-mono text-muted-foreground">POST /api/payments/mpesa-stk</span>
-                </div>
-                <div className="p-5 font-mono text-xs leading-relaxed">
-                  <p className="text-muted-foreground mb-1">// Initiate M-Pesa STK Push</p>
-                  <p className="text-foreground">{'{'}</p>
-                  <p className="text-foreground pl-4"><span className="text-muted-foreground">"bookingId"</span>: <span className="text-foreground/70">"b3f1a2..."</span>,</p>
-                  <p className="text-foreground pl-4"><span className="text-muted-foreground">"phone"</span>: <span className="text-foreground/70">"+254706848263"</span>,</p>
-                  <p className="text-foreground pl-4"><span className="text-muted-foreground">"amount"</span>: <span className="text-foreground/70">3200</span></p>
-                  <p className="text-foreground">{'}'}</p>
-                  <div className="mt-4 pt-4 border-t border-border">
-                    <p className="text-muted-foreground mb-1">// Response</p>
-                    <p className="text-foreground">{'{'}</p>
-                    <p className="text-foreground pl-4"><span className="text-muted-foreground">"message"</span>: <span className="text-success/90">"STK Push sent"</span>,</p>
-                    <p className="text-foreground pl-4"><span className="text-muted-foreground">"checkoutRequestId"</span>: <span className="text-foreground/70">"ws_CO_..."</span></p>
-                    <p className="text-foreground">{'}'}</p>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Waitlist CTA ────────────────────────────────────────────────────── */}
+      {/* ── Waitlist ────────────────────────────────────────────────────────── */}
       <section id="waitlist" className="py-28 md:py-36 border-t border-border">
-        <div className="max-w-2xl mx-auto px-5 md:px-8">
+        <div className="max-w-xl mx-auto px-5 md:px-8">
           <motion.div
             initial="hidden"
             whileInView="visible"
@@ -862,7 +1041,6 @@ export default function LandingPage() {
               <Cpu className="w-4 h-4 text-muted-foreground" />
               <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground">Early Access</span>
             </motion.div>
-
             <motion.h2
               variants={fadeUp}
               className="text-[clamp(2.5rem,6vw,5rem)] font-bold tracking-[-0.03em] text-foreground leading-[1.05] mb-4"
@@ -870,112 +1048,12 @@ export default function LandingPage() {
               Join the waitlist.
             </motion.h2>
             <motion.p variants={fadeUp} className="text-base text-muted-foreground leading-relaxed mb-10">
-              The complete car wash operating system for Kenya. Payments, analytics, and loyalty — unified. Be first in line when we launch in your area.
+              The complete car wash operating system for Kenya. Be first in line when we launch in your area.
             </motion.p>
 
-            {wlDone ? (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="rounded-2xl border border-border bg-card p-12 text-center"
-              >
-                <CheckCircle className="w-12 h-12 text-success mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-foreground mb-2">You're on the list.</h3>
-                <p className="text-muted-foreground">We'll reach out when AutoPayKe launches in your area.</p>
-              </motion.div>
-            ) : (
-              <motion.form
-                variants={fadeUp}
-                onSubmit={handleWaitlist}
-                className="rounded-2xl border border-border bg-card p-6 md:p-8 space-y-5"
-              >
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Name</label>
-                    <input
-                      type="text"
-                      placeholder="Your name"
-                      value={wlName}
-                      onChange={e => setWlName(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Phone <span className="normal-case text-muted-foreground/50">(optional)</span></label>
-                    <input
-                      type="tel"
-                      placeholder="+254..."
-                      value={wlPhone}
-                      onChange={e => setWlPhone(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30 transition-colors"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Email <span className="text-foreground/50">*</span></label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="you@example.com"
-                    value={wlEmail}
-                    onChange={e => setWlEmail(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30 transition-colors"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">I am a <span className="text-foreground/50">*</span></label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {ROLES.map(r => (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setWlRole(r)}
-                        className={`px-3 py-2.5 rounded-xl text-sm font-medium border transition-all duration-200 ${
-                          wlRole === r
-                            ? 'border-foreground bg-foreground text-background'
-                            : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground'
-                        }`}
-                      >
-                        {r}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Preferred tier <span className="normal-case text-muted-foreground/50">(optional)</span></label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {TIERS.map(t => (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() => setWlTier(wlTier === t ? '' : t)}
-                        className={`px-3 py-2.5 rounded-xl text-sm font-medium border transition-all duration-200 ${
-                          wlTier === t
-                            ? 'border-foreground bg-foreground text-background'
-                            : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground'
-                        }`}
-                      >
-                        {t}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  disabled={wlLoading || !wlEmail}
-                  className="w-full h-12 bg-foreground text-background hover:bg-foreground/90 font-semibold rounded-xl text-base"
-                >
-                  {wlLoading ? 'Joining...' : 'Join the Waitlist'} {!wlLoading && <ArrowRight className="w-4 h-4 ml-2" />}
-                </Button>
-                <p className="text-xs text-muted-foreground text-center">
-                  No spam. We'll only contact you when AutoPayKe launches in your area.
-                </p>
-              </motion.form>
-            )}
+            <motion.div variants={fadeUp}>
+              <WaitlistForm />
+            </motion.div>
           </motion.div>
         </div>
       </section>
@@ -1000,8 +1078,7 @@ export default function LandingPage() {
               <div className="space-y-3 text-sm text-muted-foreground">
                 <a href="#tiers" className="block hover:text-foreground transition-colors">Service Tiers</a>
                 <a href="#operators" className="block hover:text-foreground transition-colors">For Operators</a>
-                <a href="#drivers" className="block hover:text-foreground transition-colors">For Drivers</a>
-                <a href="#developers" className="block hover:text-foreground transition-colors">Developers</a>
+                <a href="#car-owners" className="block hover:text-foreground transition-colors">For Car Owners</a>
                 <Link to="/roadmap" className="block hover:text-foreground transition-colors">Roadmap</Link>
               </div>
             </div>

@@ -262,16 +262,17 @@ async function handleWaitlist(req: VercelRequest, res: VercelResponse) {
   `.catch(() => {});
 
   if (req.method === 'POST') {
-    const { email, name, phone, role, tier } = req.body ?? {};
+    const { email, name, phone, role, tier, metadata } = req.body ?? {};
     if (!email) return res.status(400).json({ error: 'Email is required' });
-    const validRoles = ['driver', 'owner', 'detailer', 'developer'];
-    const safeRole = validRoles.includes(role) ? role : 'driver';
+    const validRoles = ['car_owner', 'driver', 'owner', 'detailer', 'developer'];
+    const safeRole = validRoles.includes(role) ? role : 'car_owner';
     const validTiers = ['economy', 'first_class', 'premium', null, undefined, ''];
     const safeTier = validTiers.includes(tier) ? (tier || null) : null;
+    await sql`ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS metadata JSONB`.catch(() => {});
     try {
       await sql`
-        INSERT INTO waitlist (email, name, phone, role, tier)
-        VALUES (${email.toLowerCase()}, ${name || null}, ${phone || null}, ${safeRole}, ${safeTier})
+        INSERT INTO waitlist (email, name, phone, role, tier, metadata)
+        VALUES (${email.toLowerCase()}, ${name || null}, ${phone || null}, ${safeRole}, ${safeTier}, ${metadata ? JSON.stringify(metadata) : null})
       `;
       return res.status(201).json({ success: true });
     } catch {

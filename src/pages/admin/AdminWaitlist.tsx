@@ -13,14 +13,16 @@ interface WaitlistEntry {
   phone: string | null;
   role: string;
   tier: string | null;
+  metadata: { bizName?: string; bizLocation?: string } | null;
   created_at: string;
 }
 
 const ROLE_LABELS: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
-  driver:    { label: 'Driver',    icon: <Car className="w-3.5 h-3.5" />,   color: 'bg-blue-500/15 text-blue-600' },
-  owner:     { label: 'Owner',     icon: <Users className="w-3.5 h-3.5" />, color: 'bg-violet-500/15 text-violet-600' },
-  detailer:  { label: 'Detailer',  icon: <Wrench className="w-3.5 h-3.5" />, color: 'bg-amber-500/15 text-amber-600' },
-  developer: { label: 'Developer', icon: <Code2 className="w-3.5 h-3.5" />, color: 'bg-emerald-500/15 text-emerald-600' },
+  car_owner: { label: 'Car Owner',      icon: <Car className="w-3.5 h-3.5" />,   color: 'bg-blue-500/15 text-blue-400' },
+  owner:     { label: 'Business Owner', icon: <Users className="w-3.5 h-3.5" />, color: 'bg-violet-500/15 text-violet-400' },
+  detailer:  { label: 'Detailer',       icon: <Wrench className="w-3.5 h-3.5" />, color: 'bg-amber-500/15 text-amber-400' },
+  driver:    { label: 'Driver',         icon: <Car className="w-3.5 h-3.5" />,   color: 'bg-blue-500/15 text-blue-400' },
+  developer: { label: 'Developer',      icon: <Code2 className="w-3.5 h-3.5" />, color: 'bg-emerald-500/15 text-emerald-400' },
 };
 
 const TIER_LABELS: Record<string, { label: string; color: string }> = {
@@ -29,7 +31,7 @@ const TIER_LABELS: Record<string, { label: string; color: string }> = {
   premium:    { label: 'Premium',     color: 'bg-amber-500/15 text-amber-600' },
 };
 
-const ROLE_FILTERS = ['all', 'driver', 'owner', 'detailer', 'developer'];
+const ROLE_FILTERS = ['all', 'car_owner', 'owner', 'detailer', 'developer'];
 const TIER_FILTERS = ['all', 'economy', 'first_class', 'premium', 'none'];
 
 export default function AdminWaitlist() {
@@ -171,7 +173,12 @@ export default function AdminWaitlist() {
                   return (
                     <tr key={entry.id} className={`border-b border-border last:border-0 ${i % 2 === 0 ? '' : 'bg-muted/10'}`}>
                       <td className="px-4 py-3 text-foreground font-medium">{entry.email}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{entry.name || '—'}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        <p>{entry.name || '—'}</p>
+                        {entry.metadata?.bizName && (
+                          <p className="text-xs text-muted-foreground/60 mt-0.5">{entry.metadata.bizName}{entry.metadata.bizLocation ? ` · ${entry.metadata.bizLocation}` : ''}</p>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground">{entry.phone || '—'}</td>
                       <td className="px-4 py-3">
                         {roleInfo ? (

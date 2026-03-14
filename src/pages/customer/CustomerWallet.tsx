@@ -385,17 +385,47 @@ export default function CustomerWallet() {
                           Disconnect
                         </Button>
                       </>
+                    ) : isInjectedWalletAvailable() ? (
+                      <div className="py-4 space-y-3">
+                        <p className="text-sm text-muted-foreground">Wallet extension detected. Connect to pay with USDT or USDC.</p>
+                        <Button onClick={() => handleConnectInjected('your wallet')} className="w-full">
+                          <Wallet className="w-4 h-4 mr-2" /> Connect {getInjectedWalletName()}
+                        </Button>
+                      </div>
+                    ) : isMobileDevice() ? (
+                      <div className="py-2 space-y-3">
+                        <p className="text-sm text-muted-foreground">Open this app in your wallet's built-in browser to connect:</p>
+                        <div className="space-y-2">
+                          {getMobileWalletDeepLinks().map(link => (
+                            <a key={link.name} href={link.url}
+                              className="flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary/40 hover:bg-primary/5 transition-colors no-underline">
+                              <span className="text-xl">{link.icon}</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-foreground">Open in {link.name}</p>
+                                <p className="text-xs text-muted-foreground truncate">{link.url.replace(/\?.*/, '')}</p>
+                              </div>
+                              <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                            </a>
+                          ))}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground text-center pt-1">
+                          Tapping a link opens that wallet app and loads this page with wallet access enabled.
+                        </p>
+                      </div>
                     ) : (
                       <div className="py-4 text-center space-y-3">
-                        <p className="text-sm text-muted-foreground">Connect your existing crypto wallet to pay with USDT or USDC.</p>
-                        {!isInjectedWalletAvailable() && (
-                          <p className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded-lg p-2">
-                            No wallet extension detected. Install Core Wallet (recommended for Avalanche) or MetaMask, or open this page in Trust Wallet's browser.
-                          </p>
-                        )}
-                        <Button onClick={() => handleConnectInjected('your wallet')} variant="outline" className="w-full">
-                          <Wallet className="w-4 h-4 mr-2" /> Connect Wallet
-                        </Button>
+                        <p className="text-sm text-muted-foreground">No wallet extension detected.</p>
+                        <p className="text-xs text-muted-foreground bg-muted rounded-lg p-3">
+                          Install <strong>Core Wallet</strong> (recommended for Avalanche) or <strong>MetaMask</strong> browser extension, then refresh this page.
+                        </p>
+                        <div className="flex gap-2">
+                          <a href="https://core.app" target="_blank" rel="noopener noreferrer" className="flex-1">
+                            <Button variant="outline" size="sm" className="w-full">Get Core Wallet</Button>
+                          </a>
+                          <a href="https://metamask.io" target="_blank" rel="noopener noreferrer" className="flex-1">
+                            <Button variant="outline" size="sm" className="w-full">Get MetaMask</Button>
+                          </a>
+                        </div>
                       </div>
                     )}
                   </div>

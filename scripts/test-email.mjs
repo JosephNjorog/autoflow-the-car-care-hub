@@ -21,7 +21,7 @@ const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
 const APP_URL = 'https://autopayk.app';
 const BRAND_COLOR = '#0ea5e9';
 const BRAND_DARK  = '#0284c7';
-const TO = 'bravourebridge@gmail.com';
+const TO = 'mwangijoenjoroge@gmail.com';
 
 console.log('SMTP config:', { host: SMTP_HOST, port: SMTP_PORT, user: SMTP_USER });
 

@@ -1,19 +1,30 @@
-import nodemailer from 'nodemailer';
+// ─── Brevo HTTP API (replaces nodemailer — Vercel Hobby blocks SMTP port 587) ─
+// Requires BREVO_API_KEY in environment variables.
+// Get it: https://app.brevo.com → Settings → SMTP & API → API Keys → Create API key
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-  pool: true,           // reuse connections — avoids reconnect overhead
-  maxConnections: 3,
-  socketTimeout: 10000, // fail fast if Brevo is unreachable
-});
+async function sendBrevoEmail(to: string, subject: string, htmlContent: string): Promise<void> {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) {
+    console.error('BREVO_API_KEY not set — email skipped');
+    return;
+  }
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'api-key': apiKey },
+    body: JSON.stringify({
+      sender: { name: 'AutoPayKe', email: process.env.SMTP_USER || 'noreply@autopayk.app' },
+      to: [{ email: to }],
+      subject,
+      htmlContent,
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    console.error(`Brevo API error ${res.status}:`, text);
+    throw new Error(`Email failed: HTTP ${res.status}`);
+  }
+}
 
-const FROM = `"AutoPayKe" <${process.env.SMTP_USER}>`;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://autoflow.vercel.app';
 const BRAND_COLOR = '#0ea5e9'; // sky-500
 const BRAND_DARK = '#0284c7';  // sky-600
@@ -152,12 +163,7 @@ export async function sendWelcomeEmail(
     <p style="font-size:13px;color:#94a3b8;">If you have any questions, our support team is always here to help. Reply to this email or visit <a href="${APP_URL}/support" style="color:${BRAND_COLOR};">our support page</a>.</p>
   `;
 
-  await transporter.sendMail({
-    from: FROM,
-    to: email,
-    subject: `Welcome to AutoPayKe, ${firstName}!`,
-    html: emailLayout(content, `Hi ${firstName}, welcome to AutoPayKe — the smart car care hub.`),
-  });
+  await sendBrevoEmail(email, `Welcome to AutoPayKe, ${firstName}!`, emailLayout(content, `Hi ${firstName}, welcome to AutoPayKe — the smart car care hub.`));
 }
 
 // ─── Owner Pending Approval ───────────────────────────────────────────────────
@@ -179,12 +185,7 @@ export async function sendOwnerPendingEmail(email: string, firstName: string): P
     <p style="font-size:13px;color:#94a3b8;">Questions? Email us at <a href="mailto:${process.env.SMTP_USER}" style="color:${BRAND_COLOR};">${process.env.SMTP_USER}</a> and reference your registered email.</p>
   `;
 
-  await transporter.sendMail({
-    from: FROM,
-    to: email,
-    subject: 'AutoPayKe — Your application is under review',
-    html: emailLayout(content, 'We received your business owner application and are reviewing it now.'),
-  });
+  await sendBrevoEmail(email, 'AutoPayKe — Your application is under review', emailLayout(content, 'We received your business owner application and are reviewing it now.'));
 }
 
 // ─── Owner Approved ───────────────────────────────────────────────────────────
@@ -210,12 +211,7 @@ export async function sendOwnerApprovedEmail(email: string, firstName: string): 
     <p style="font-size:13px;color:#94a3b8;">Need help getting started? Visit our <a href="${APP_URL}/roadmap" style="color:${BRAND_COLOR};">feature roadmap</a> or contact support.</p>
   `;
 
-  await transporter.sendMail({
-    from: FROM,
-    to: email,
-    subject: 'AutoPayKe — Your account has been approved! 🎉',
-    html: emailLayout(content, 'Your AutoPayKe business owner account is approved and ready to go.'),
-  });
+  await sendBrevoEmail(email, 'AutoPayKe — Your account has been approved! 🎉', emailLayout(content, 'Your AutoPayKe business owner account is approved and ready to go.'));
 }
 
 // ─── Owner Rejected ───────────────────────────────────────────────────────────
@@ -235,12 +231,7 @@ export async function sendOwnerRejectedEmail(email: string, firstName: string): 
     <p style="font-size:13px;color:#94a3b8;">For questions about this decision, contact us at <a href="mailto:${process.env.SMTP_USER}" style="color:${BRAND_COLOR};">${process.env.SMTP_USER}</a>. Please include your registered email address.</p>
   `;
 
-  await transporter.sendMail({
-    from: FROM,
-    to: email,
-    subject: 'AutoPayKe — Update on your business owner application',
-    html: emailLayout(content, 'We have an update regarding your AutoPayKe business owner application.'),
-  });
+  await sendBrevoEmail(email, 'AutoPayKe — Update on your business owner application', emailLayout(content, 'We have an update regarding your AutoPayKe business owner application.'));
 }
 
 // ─── Password Reset ───────────────────────────────────────────────────────────
@@ -258,12 +249,7 @@ export async function sendPasswordReset(email: string, resetUrl: string): Promis
     <p style="font-size:13px;color:#94a3b8;">Or copy and paste this link into your browser:<br /><a href="${resetUrl}" style="color:${BRAND_COLOR};word-break:break-all;">${resetUrl}</a></p>
   `;
 
-  await transporter.sendMail({
-    from: FROM,
-    to: email,
-    subject: 'AutoPayKe — Reset your password',
-    html: emailLayout(content, 'You requested a password reset for your AutoPayKe account.'),
-  });
+  await sendBrevoEmail(email, 'AutoPayKe — Reset your password', emailLayout(content, 'You requested a password reset for your AutoPayKe account.'));
 }
 
 // ─── Booking Confirmation ─────────────────────────────────────────────────────
@@ -309,12 +295,7 @@ export async function sendBookingConfirmation(
     <p style="font-size:13px;color:#94a3b8;">Need to cancel or reschedule? Visit your bookings page or contact the location directly. Cancellations are accepted up to 2 hours before your appointment.</p>
   `;
 
-  await transporter.sendMail({
-    from: FROM,
-    to: email,
-    subject: `Booking Confirmed — ${data.serviceName} at ${data.locationName}`,
-    html: emailLayout(content, `Your ${data.serviceName} booking at ${data.locationName} is confirmed for ${data.date}.`),
-  });
+  await sendBrevoEmail(email, `Booking Confirmed — ${data.serviceName} at ${data.locationName}`, emailLayout(content, `Your ${data.serviceName} booking at ${data.locationName} is confirmed for ${data.date}.`));
 }
 
 // ─── Booking Status Update ────────────────────────────────────────────────────
@@ -399,12 +380,7 @@ export async function sendBookingStatusEmail(
     ${cfg.cta ? `<div style="text-align:center;margin:24px 0;"><a href="${APP_URL}${cfg.ctaPath}" class="btn">${cfg.cta}</a></div>` : ''}
   `;
 
-  await transporter.sendMail({
-    from: FROM,
-    to: email,
-    subject: `AutoPayKe — ${cfg.subject}`,
-    html: emailLayout(content),
-  });
+  await sendBrevoEmail(email, `AutoPayKe — ${cfg.subject}`, emailLayout(content));
 }
 
 // ─── Staff Credentials ────────────────────────────────────────────────────────
@@ -441,12 +417,7 @@ export async function sendStaffCredentials(
     <p style="font-size:13px;color:#94a3b8;">Questions? Contact your business owner or reach AutoPayKe support at <a href="mailto:${process.env.SMTP_USER}" style="color:${BRAND_COLOR};">${process.env.SMTP_USER}</a></p>
   `;
 
-  await transporter.sendMail({
-    from: FROM,
-    to: email,
-    subject: 'AutoPayKe — Your detailer account is ready',
-    html: emailLayout(content, `${firstName}, your AutoPayKe detailer account is live. Here are your login credentials.`),
-  });
+  await sendBrevoEmail(email, 'AutoPayKe — Your detailer account is ready', emailLayout(content, `${firstName}, your AutoPayKe detailer account is live. Here are your login credentials.`));
 }
 
 // ─── Loyalty Milestone ────────────────────────────────────────────────────────
@@ -483,12 +454,7 @@ export async function sendLoyaltyMilestoneEmail(
     <p style="font-size:13px;color:#94a3b8;">Keep earning points with every booking. The more you wash, the more you save! View your full points history in your dashboard.</p>
   `;
 
-  await transporter.sendMail({
-    from: FROM,
-    to: email,
-    subject: `AutoPayKe — You've earned ${milestone} loyalty points! 🌟`,
-    html: emailLayout(content, `Congrats! You've reached ${milestone} loyalty points on AutoPayKe.`),
-  });
+  await sendBrevoEmail(email, `AutoPayKe — You've earned ${milestone} loyalty points! 🌟`, emailLayout(content, `Congrats! You've reached ${milestone} loyalty points on AutoPayKe.`));
 }
 
 // ─── Waitlist Confirmation ────────────────────────────────────────────────────
@@ -545,12 +511,7 @@ export async function sendWaitlistConfirmationEmail(
     <p style="font-size:13px;color:#94a3b8;">Follow our progress or tell a friend — the more people on the waitlist, the sooner we launch in your area. 🙌<br /><br />Questions? Reply to this email — we actually read every one.</p>
   `;
 
-  await transporter.sendMail({
-    from: FROM,
-    to: email,
-    subject: `You're on the AutoPayKe waitlist!`,
-    html: emailLayout(content, `Welcome to the waitlist, ${firstName} — we'll be in touch when we go live.`),
-  });
+  await sendBrevoEmail(email, `You're on the AutoPayKe waitlist!`, emailLayout(content, `Welcome to the waitlist, ${firstName} — we'll be in touch when we go live.`));
 }
 
 // ─── Waitlist Announcement ────────────────────────────────────────────────────
@@ -648,12 +609,7 @@ export async function sendWaitlistAnnouncementEmail(
     <p style="font-size:13px;color:#94a3b8;">Questions? Our team is ready to help. Reply to this email or visit <a href="${APP_URL}/support" style="color:${BRAND_COLOR};">our support page</a>. We're building this for you and we want your feedback.</p>
   `;
 
-  await transporter.sendMail({
-    from: FROM,
-    to: email,
-    subject: cfg.subject,
-    html: emailLayout(content, cfg.preheader),
-  });
+  await sendBrevoEmail(email, cfg.subject, emailLayout(content, cfg.preheader));
 }
 
 // ─── Generic Notification ─────────────────────────────────────────────────────
@@ -671,10 +627,5 @@ export async function sendNotificationEmail(
     </div>
   `;
 
-  await transporter.sendMail({
-    from: FROM,
-    to: email,
-    subject: `AutoPayKe — ${title}`,
-    html: emailLayout(content),
-  });
+  await sendBrevoEmail(email, `AutoPayKe — ${title}`, emailLayout(content));
 }

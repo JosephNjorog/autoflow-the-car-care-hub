@@ -69,8 +69,15 @@ export async function initiateStkPush(
   const passkey    = process.env.MPESA_PASSKEY!;
   const timestamp  = formatTimestamp();
   const password   = Buffer.from(`${shortcode}${passkey}${timestamp}`).toString('base64');
-  const appUrl     = process.env.NEXT_PUBLIC_APP_URL || 'https://autopayk.vercel.app';
-  const callbackUrl = `${appUrl}/api/payments/mpesa-callback`;
+  // MPESA_CALLBACK_HOST must be set in Vercel env to the production URL (e.g. https://autopayk.vercel.app).
+  // NEXT_PUBLIC_APP_URL is a frontend var that may be localhost in dev — don't rely on it for callbacks.
+  const callbackHost =
+    process.env.MPESA_CALLBACK_HOST ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    'https://autopayk.vercel.app';
+  const cbSecret = process.env.MPESA_CALLBACK_SECRET;
+  const callbackUrl = `${callbackHost}/api/payments/mpesa-callback${cbSecret ? `?s=${cbSecret}` : ''}`;
 
   const token = await getMpesaAccessToken();
   const stkRes = await fetch(`${MPESA_BASE}/mpesa/stkpush/v1/processrequest`, {

@@ -68,6 +68,8 @@ export default defineConfig(() => ({
         ],
       },
       workbox: {
+        // Allow caching chunks up to 3MB (our vendor chunk is large)
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         // Cache strategy per resource type
         runtimeCaching: [
           {
@@ -130,6 +132,20 @@ export default defineConfig(() => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react':  ['react', 'react-dom', 'react-router-dom'],
+          'vendor-ui':     ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select', '@radix-ui/react-tabs', '@radix-ui/react-tooltip'],
+          'vendor-query':  ['@tanstack/react-query'],
+          'vendor-motion': ['framer-motion'],
+          'vendor-charts': ['recharts'],
+          'vendor-misc':   ['ethers', 'date-fns', 'zod'],
+        },
+      },
     },
   },
 }));

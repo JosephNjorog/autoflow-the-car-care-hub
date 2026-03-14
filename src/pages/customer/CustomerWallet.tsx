@@ -17,6 +17,7 @@ import {
 } from '@/lib/wdk';
 import {
   connectInjectedWallet, isInjectedWalletAvailable, getInjectedWalletName,
+  isMobileDevice, getMobileWalletDeepLinks,
 } from '@/lib/crypto';
 
 type ActiveTab = 'wallet' | 'prices' | 'history';

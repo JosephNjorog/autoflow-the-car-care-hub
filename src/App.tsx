@@ -78,10 +78,21 @@ function RootRedirect() {
   return <Navigate to={dashboardMap[user.role]} replace />;
 }
 
-const App = () => (
+const App = () => {
+  // Show splash once per browser session
+  const [splashDone, setSplashDone] = useState(() =>
+    sessionStorage.getItem('afw_splash') === '1'
+  );
+  const handleSplashDone = () => {
+    sessionStorage.setItem('afw_splash', '1');
+    setSplashDone(true);
+  };
+
+  return (
   <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        {!splashDone && <SplashScreen onDone={handleSplashDone} />}
         <Toaster />
         <Sonner />
         <UpdatePrompt />

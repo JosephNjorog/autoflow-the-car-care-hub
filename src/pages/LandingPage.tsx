@@ -415,8 +415,8 @@ export default function LandingPage() {
             <span className="text-base font-semibold tracking-tight text-foreground">AutoPayKe</span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-7 text-sm text-muted-foreground">
-            <a href="#tiers" className="hover:text-foreground transition-colors duration-200">Tiers</a>
+          <div className="hidden md:flex items-center gap-7 text-sm font-medium text-foreground/80">
+            <a href="#tiers" className="hover:text-foreground transition-colors duration-200">Business</a>
             <a href="#operators" className="hover:text-foreground transition-colors duration-200">For Operators</a>
             <a href="#car-owners" className="hover:text-foreground transition-colors duration-200">For Car Owners</a>
             <Link to="/roadmap" className="hover:text-foreground transition-colors duration-200">Roadmap</Link>

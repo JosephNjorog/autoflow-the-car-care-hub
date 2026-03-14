@@ -155,6 +155,7 @@ const App = () => {
       </TooltipProvider>
     </QueryClientProvider>
   </ThemeProvider>
-);
+  );
+};
 
 export default App;

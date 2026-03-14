@@ -117,6 +117,46 @@ export function getInjectedWalletName(): string {
   return 'Web3 Wallet';
 }
 
+/** True when running on a mobile/tablet device */
+export function isMobileDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+}
+
+/**
+ * Deep links to open the current dapp URL inside a mobile wallet's built-in browser.
+ * When the user taps one of these links, the wallet app opens and injects window.ethereum,
+ * making the normal connectInjectedWallet() flow work.
+ */
+export interface MobileWalletDeepLink {
+  name: string;
+  icon: string;
+  url: string;
+}
+
+export function getMobileWalletDeepLinks(): MobileWalletDeepLink[] {
+  const dappUrl = encodeURIComponent(window.location.href);
+  const host    = window.location.host;
+  const path    = window.location.pathname + window.location.search;
+  return [
+    {
+      name: 'MetaMask',
+      icon: '🦊',
+      url: `https://metamask.app.link/dapp/${host}${path}`,
+    },
+    {
+      name: 'Core Wallet',
+      icon: '🔷',
+      url: `https://core.app/dapp/?url=${dappUrl}`,
+    },
+    {
+      name: 'Trust Wallet',
+      icon: '🛡️',
+      url: `https://link.trustwallet.com/open_url?coin_id=20000714&url=${dappUrl}`,
+    },
+  ];
+}
+
 // ─── Injected Wallet: Connect ────────────────────────────────────────────────
 
 export async function connectInjectedWallet(): Promise<string> {

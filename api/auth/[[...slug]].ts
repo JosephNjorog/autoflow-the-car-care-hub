@@ -245,6 +245,53 @@ async function handleSubmitKyc(req: VercelRequest, res: VercelResponse) {
   return res.status(200).json({ success: true });
 }
 
+// ── POST /api/auth/waitlist  (public — no auth required) ─────────────────────
+// ── GET  /api/auth/waitlist  (admin only) ─────────────────────────────────────
+async function handleWaitlist(req: VercelRequest, res: VercelResponse) {
+  // Lazy-create the table
+  await sql`
+    CREATE TABLE IF NOT EXISTS waitlist (
+      id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      email      TEXT NOT NULL UNIQUE,
+      name       TEXT,
+      phone      TEXT,
+      role       TEXT NOT NULL DEFAULT 'driver',
+      tier       TEXT,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `.catch(() => {});
+
+  if (req.method === 'POST') {
+    const { email, name, phone, role, tier } = req.body ?? {};
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+    const validRoles = ['driver', 'owner', 'detailer', 'developer'];
+    const safeRole = validRoles.includes(role) ? role : 'driver';
+    const validTiers = ['economy', 'first_class', 'premium', null, undefined, ''];
+    const safeTier = validTiers.includes(tier) ? (tier || null) : null;
+    try {
+      await sql`
+        INSERT INTO waitlist (email, name, phone, role, tier)
+        VALUES (${email.toLowerCase()}, ${name || null}, ${phone || null}, ${safeRole}, ${safeTier})
+      `;
+      return res.status(201).json({ success: true });
+    } catch {
+      return res.status(409).json({ error: 'Email already on waitlist' });
+    }
+  }
+
+  if (req.method === 'GET') {
+    const auth = requireAuth(req, res);
+    if (!auth || auth.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    const rows = await sql`
+      SELECT id, email, name, phone, role, tier, created_at
+      FROM waitlist ORDER BY created_at DESC
+    `;
+    return res.status(200).json(rows);
+  }
+
+  return res.status(405).json({ error: 'Method not allowed' });
+}
+
 // ── Router ────────────────────────────────────────────────────────────────────
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
@@ -259,6 +306,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (route === 'google')          return handleGoogle(req, res);
   if (route === 'google-callback') return handleGoogleCallback(req, res);
   if (route === 'submit-kyc')      return handleSubmitKyc(req, res);
+  if (route === 'waitlist')        return handleWaitlist(req, res);
 
   return res.status(404).json({ error: 'Not found' });
 }

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import UpdatePrompt from "@/components/pwa/UpdatePrompt";
 import SplashScreen from "@/components/SplashScreen";

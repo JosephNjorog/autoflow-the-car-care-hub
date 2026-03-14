@@ -8,6 +8,7 @@ import {
   sendWelcomeEmail,
   sendOwnerPendingEmail,
   sendPasswordReset,
+  sendWaitlistAnnouncementEmail,
 } from '../_lib/email';
 
 // ── POST /api/auth/login ──────────────────────────────────────────────────────
@@ -283,14 +284,59 @@ async function handleWaitlist(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {
     const auth = requireAuth(req, res);
     if (!auth || auth.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    await sql`ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS metadata JSONB`.catch(() => {});
     const rows = await sql`
-      SELECT id, email, name, phone, role, tier, created_at
+      SELECT id, email, name, phone, role, tier, metadata, created_at
       FROM waitlist ORDER BY created_at DESC
     `;
     return res.status(200).json(rows);
   }
 
   return res.status(405).json({ error: 'Method not allowed' });
+}
+
+// ── POST /api/auth/waitlist-announce  (admin only) ────────────────────────────
+async function handleWaitlistAnnounce(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  const auth = requireAuth(req, res);
+  if (!auth || auth.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+
+  const { roles } = req.body ?? {};
+  // roles: string[] | undefined — if undefined/empty, send to everyone
+  const validRoles = ['car_owner', 'driver', 'owner', 'detailer'];
+  const targetRoles: string[] = Array.isArray(roles) && roles.length > 0
+    ? roles.filter((r: string) => validRoles.includes(r))
+    : validRoles;
+
+  await sql`ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS metadata JSONB`.catch(() => {});
+
+  const recipients = await sql`
+    SELECT email, name, role, tier FROM waitlist
+    WHERE role = ANY(${targetRoles})
+    ORDER BY created_at ASC
+  `;
+
+  let sent = 0;
+  let failed = 0;
+
+  for (const r of recipients) {
+    try {
+      await sendWaitlistAnnouncementEmail(
+        r.email as string,
+        r.name as string | null,
+        r.role as string,
+        r.tier as string | null
+      );
+      sent++;
+      // Small delay to avoid SMTP rate limits (Brevo allows ~10/s)
+      await new Promise(resolve => setTimeout(resolve, 120));
+    } catch (err) {
+      console.error(`Announcement email failed for ${r.email}:`, err);
+      failed++;
+    }
+  }
+
+  return res.status(200).json({ sent, failed, total: recipients.length });
 }
 
 // ── Router ────────────────────────────────────────────────────────────────────
@@ -307,7 +353,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (route === 'google')          return handleGoogle(req, res);
   if (route === 'google-callback') return handleGoogleCallback(req, res);
   if (route === 'submit-kyc')      return handleSubmitKyc(req, res);
-  if (route === 'waitlist')        return handleWaitlist(req, res);
+  if (route === 'waitlist')          return handleWaitlist(req, res);
+  if (route === 'waitlist-announce') return handleWaitlistAnnounce(req, res);
 
   return res.status(404).json({ error: 'Not found' });
 }

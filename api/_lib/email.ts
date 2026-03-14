@@ -491,6 +491,109 @@ export async function sendLoyaltyMilestoneEmail(
   });
 }
 
+// ─── Waitlist Announcement ────────────────────────────────────────────────────
+
+export async function sendWaitlistAnnouncementEmail(
+  email: string,
+  name: string | null,
+  role: string,
+  tier: string | null
+): Promise<void> {
+  const firstName = name ? name.split(' ')[0] : 'there';
+  const tierLabel: Record<string, string> = {
+    economy: 'Economy', first_class: 'First Class', premium: 'Premium',
+  };
+
+  const roleContent: Record<string, { subject: string; preheader: string; headline: string; sub: string; steps: { icon: string; title: string; desc: string }[]; cta: string; ctaPath: string }> = {
+    car_owner: {
+      subject: 'AutoPayKe is live — book your first wash 🚗',
+      preheader: 'The easiest way to get your car washed in Nairobi is finally here.',
+      headline: `Your car deserves the best, ${firstName}`,
+      sub: 'AutoPayKe is officially live! Here\'s how to get your first wash in under 3 minutes.',
+      steps: [
+        { icon: '👤', title: 'Create your profile', desc: 'Sign up at AutoPayKe and complete your profile with your contact details.' },
+        { icon: '🚗', title: 'Add your vehicle', desc: 'Add your car(s) — make, model, colour. We\'ll remember them for every booking.' },
+        { icon: '📍', title: 'Choose a car wash near you', desc: 'Browse verified car washes in your area, compare prices, and pick a time that works.' },
+        { icon: '💳', title: 'Pay with M-Pesa or card', desc: 'Pay instantly — M-Pesa STK Push lands on your phone, approve it and you\'re done.' },
+        { icon: '✅', title: 'Confirm pickup', desc: 'After your wash, confirm the service in the app. Payment releases to the car wash only when you\'re happy.' },
+      ],
+      cta: 'Book My First Wash',
+      ctaPath: '/register',
+    },
+    owner: {
+      subject: 'AutoPayKe is live — register your car wash now 🏢',
+      preheader: 'Start accepting bookings and managing your car wash business digitally.',
+      headline: `Grow your car wash with AutoPayKe, ${firstName}`,
+      sub: 'We\'re live! Here\'s how to get your car wash on the platform and start accepting bookings today.',
+      steps: [
+        { icon: '📝', title: 'Create your business account', desc: 'Sign up as a Business Owner and complete your profile with your business details.' },
+        { icon: '📋', title: 'Submit KYC documents', desc: 'Upload your ID and business documents. Our team reviews and approves within 1–2 business days.' },
+        { icon: '📍', title: 'Register your location', desc: 'Add your car wash address, operating hours, and photos so customers can find you.' },
+        { icon: '🧹', title: 'Set up your services', desc: 'Define your wash packages — name, description, duration, and pricing.' },
+        { icon: '👥', title: 'Add your detailers', desc: 'Invite your staff as detailers. They get a login and can manage their own schedule.' },
+        { icon: '💰', title: 'Configure M-Pesa payments', desc: 'Payments from customers flow through AutoPayKe. Your 90% share is settled weekly via M-Pesa.' },
+      ],
+      cta: 'Register My Car Wash',
+      ctaPath: '/register',
+    },
+    detailer: {
+      subject: 'AutoPayKe is live — start earning now 🔧',
+      preheader: 'Get jobs assigned to you, track earnings, and get paid via M-Pesa.',
+      headline: `Ready to start earning, ${firstName}?`,
+      sub: 'AutoPayKe is officially live! Here\'s everything you need to know to start working and getting paid.',
+      steps: [
+        { icon: '📝', title: 'Complete your profile', desc: 'Log in and fill in your profile — your skills, experience, and a profile photo help you get more jobs.' },
+        { icon: '📅', title: 'Set your availability', desc: 'Update your weekly schedule so the system knows when you\'re available to take jobs.' },
+        { icon: '🔔', title: 'How job assignment works', desc: 'When a customer books at your car wash, the system assigns the job to you based on your schedule. You\'ll get a notification immediately.' },
+        { icon: '📸', title: 'Upload before & after photos', desc: 'When you start and complete a job, take photos through the app. This protects you and builds your reputation.' },
+        { icon: '💰', title: 'Getting paid via M-Pesa', desc: 'You earn 40% of the service price. Payments are released after the customer confirms the job — typically within minutes.' },
+      ],
+      cta: 'Go to My Dashboard',
+      ctaPath: '/login',
+    },
+  };
+
+  const cfg = roleContent[role] || roleContent.car_owner;
+  const tierBadge = tier && tierLabel[tier]
+    ? `<span style="display:inline-block;padding:3px 12px;border-radius:99px;background:#1e293b;color:#94a3b8;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-left:8px;">${tierLabel[tier]} Tier</span>`
+    : '';
+
+  const stepsHtml = cfg.steps.map(s => `
+    <div style="display:flex;gap:16px;padding:14px 0;border-bottom:1px solid #f1f5f9;">
+      <div style="font-size:22px;line-height:1;flex-shrink:0;width:32px;text-align:center;">${s.icon}</div>
+      <div>
+        <p style="margin:0 0 4px;font-size:15px;font-weight:600;color:#0f172a;">${s.title}</p>
+        <p style="margin:0;font-size:14px;color:#64748b;line-height:1.5;">${s.desc}</p>
+      </div>
+    </div>
+  `).join('');
+
+  const content = `
+    <h1>🚀 AutoPayKe is Live!${tierBadge}</h1>
+    <p>${cfg.sub}</p>
+    <div class="success-box">
+      <p><strong>${cfg.headline}</strong><br /><br />You were one of the first to join our waitlist — thank you for believing in what we're building. Now let's get to work.</p>
+    </div>
+    <hr class="divider" />
+    <p style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:4px;">How to get started</p>
+    <div style="padding:0 4px;">
+      ${stepsHtml}
+    </div>
+    <div style="text-align:center;margin:32px 0;">
+      <a href="${APP_URL}${cfg.ctaPath}" class="btn">${cfg.cta} →</a>
+    </div>
+    <hr class="divider" />
+    <p style="font-size:13px;color:#94a3b8;">Questions? Our team is ready to help. Reply to this email or visit <a href="${APP_URL}/support" style="color:${BRAND_COLOR};">our support page</a>. We're building this for you and we want your feedback.</p>
+  `;
+
+  await transporter.sendMail({
+    from: FROM,
+    to: email,
+    subject: cfg.subject,
+    html: emailLayout(content, cfg.preheader),
+  });
+}
+
 // ─── Generic Notification ─────────────────────────────────────────────────────
 
 export async function sendNotificationEmail(

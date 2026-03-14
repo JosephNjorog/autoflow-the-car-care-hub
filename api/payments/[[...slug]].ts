@@ -181,6 +181,14 @@ interface MpesaCallback {
 
 async function handleMpesaCallback(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  // Validate optional secret token to reject spoofed callbacks
+  const cbSecret = process.env.MPESA_CALLBACK_SECRET;
+  if (cbSecret && req.query.s !== cbSecret) {
+    console.warn('M-Pesa callback rejected: invalid secret');
+    return res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' }); // always 200 to Safaricom
+  }
+
   const callback = req.body as MpesaCallback;
   try {
     const stkCallback = callback?.Body?.stkCallback;
@@ -196,6 +204,11 @@ async function handleMpesaCallback(req: VercelRequest, res: VercelResponse) {
       WHERE t.mpesa_checkout_request_id = ${CheckoutRequestID}
     `;
     if (!transaction) return res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });
+
+    // Idempotency: skip if already processed
+    if (transaction.status === 'captured' || transaction.status === 'released') {
+      return res.status(200).json({ ResultCode: 0, ResultDesc: 'Already processed' });
+    }
 
     if (ResultCode === 0) {
       const items   = CallbackMetadata?.Item || [];

@@ -142,7 +142,11 @@ export async function initiateB2CPayout(
   }
 
   const shortcode = process.env.MPESA_SHORTCODE!;
-  const appUrl    = process.env.NEXT_PUBLIC_APP_URL || 'https://autopayk.vercel.app';
+  const callbackHost =
+    process.env.MPESA_CALLBACK_HOST ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    'https://autopayk.vercel.app';
 
   const token = await getMpesaAccessToken();
   const b2cRes = await fetch(`${MPESA_BASE}/mpesa/b2c/v3/paymentrequest`, {
@@ -157,8 +161,8 @@ export async function initiateB2CPayout(
       PartyA:              shortcode,
       PartyB:              ownerPhone,
       Remarks:             sanitiseDaraja(`AutoPayKe owner payout booking ${bookingId.slice(0, 8)}`),
-      QueueTimeOutURL:     `${appUrl}/api/payments/b2c-timeout`,
-      ResultURL:           `${appUrl}/api/payments/b2c-result`,
+      QueueTimeOutURL:     `${callbackHost}/api/payments/b2c-timeout`,
+      ResultURL:           `${callbackHost}/api/payments/b2c-result`,
       Occassion:           bookingId.slice(0, 8),
     }),
   });

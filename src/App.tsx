@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import UpdatePrompt from "@/components/pwa/UpdatePrompt";
+import InstallPrompt from "@/components/pwa/InstallPrompt";
 import SplashScreen from "@/components/SplashScreen";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";

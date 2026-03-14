@@ -98,6 +98,7 @@ const App = () => {
         <Toaster />
         <Sonner />
         <UpdatePrompt />
+        <InstallPrompt />
         <AuthProvider>
           <BrowserRouter>
             <Routes>

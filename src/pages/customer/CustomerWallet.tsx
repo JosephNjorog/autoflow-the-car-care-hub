@@ -119,11 +119,18 @@ export default function CustomerWallet() {
 
   const handleConnectInjected = async (walletName: string) => {
     if (!isInjectedWalletAvailable()) {
-      toast({
-        title: 'No Wallet Detected',
-        description: `Please install ${walletName} or open this page in your wallet's browser.`,
-        variant: 'destructive',
-      });
+      if (isMobileDevice()) {
+        toast({
+          title: 'Open in Wallet App',
+          description: 'Use the links below to open this page inside your wallet\'s browser.',
+        });
+      } else {
+        toast({
+          title: 'No Wallet Extension',
+          description: `Install ${walletName} browser extension, then refresh this page.`,
+          variant: 'destructive',
+        });
+      }
       return;
     }
     try {

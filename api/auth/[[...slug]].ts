@@ -276,6 +276,9 @@ async function handleWaitlist(req: VercelRequest, res: VercelResponse) {
         INSERT INTO waitlist (email, name, phone, role, tier, metadata)
         VALUES (${email.toLowerCase()}, ${name || null}, ${phone || null}, ${safeRole}, ${safeTier}, ${metadata ? JSON.stringify(metadata) : null})
       `;
+      // Fire-and-forget confirmation email
+      sendWaitlistConfirmationEmail(email.toLowerCase(), name || null, safeRole, safeTier)
+        .catch((err: unknown) => console.error('Waitlist confirmation email failed:', err));
       return res.status(201).json({ success: true });
     } catch {
       return res.status(409).json({ error: 'Email already on waitlist' });

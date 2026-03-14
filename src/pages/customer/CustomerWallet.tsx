@@ -432,28 +432,44 @@ export default function CustomerWallet() {
 
                   <div className="p-6 rounded-xl bg-card border border-border shadow-card">
                     <h3 className="font-display text-foreground mb-1">Supported Wallets</h3>
-                    <p className="text-xs text-muted-foreground mb-4">Any EIP-1193 compatible wallet on Avalanche C-Chain</p>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      {isMobileDevice() ? 'Tap to open this dapp in the wallet\'s browser' : 'Any EIP-1193 compatible wallet on Avalanche C-Chain'}
+                    </p>
                     <div className="space-y-3">
-                      {[
-                        { name: 'Core Wallet', desc: 'Avalanche native — recommended for AVAX & USDT', recommended: true },
-                        { name: 'MetaMask', desc: 'Most popular browser extension wallet' },
-                        { name: 'Trust Wallet', desc: 'Open this page in the Trust Wallet in-app browser' },
-                        { name: 'Coinbase Wallet', desc: 'Coinbase self-custody wallet' },
-                      ].map(w => (
-                        <div key={w.name} className="flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary/30 transition-colors">
-                          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <Wallet className="w-4 h-4 text-primary" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm font-medium text-foreground">{w.name}</p>
-                              {w.recommended && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">Recommended</span>}
+                      {isMobileDevice() ? (
+                        getMobileWalletDeepLinks().map(link => (
+                          <a key={link.name} href={link.url}
+                            className="flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary/40 hover:bg-primary/5 transition-colors no-underline">
+                            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-lg">{link.icon}</div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-foreground">{link.name}</p>
+                              <p className="text-xs text-muted-foreground">Open dapp in {link.name} browser</p>
                             </div>
-                            <p className="text-xs text-muted-foreground">{w.desc}</p>
+                            <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
+                          </a>
+                        ))
+                      ) : (
+                        [
+                          { name: 'Core Wallet', desc: 'Avalanche native — recommended for AVAX & USDT', recommended: true },
+                          { name: 'MetaMask', desc: 'Most popular browser extension wallet' },
+                          { name: 'Trust Wallet', desc: 'Open this page in the Trust Wallet in-app browser' },
+                          { name: 'Coinbase Wallet', desc: 'Coinbase self-custody wallet' },
+                        ].map(w => (
+                          <div key={w.name} className="flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary/30 transition-colors">
+                            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <Wallet className="w-4 h-4 text-primary" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium text-foreground">{w.name}</p>
+                                {w.recommended && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">Recommended</span>}
+                              </div>
+                              <p className="text-xs text-muted-foreground">{w.desc}</p>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => handleConnectInjected(w.name)}>Connect</Button>
                           </div>
-                          <Button variant="outline" size="sm" onClick={() => handleConnectInjected(w.name)}>Connect</Button>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </div>
                 </motion.div>

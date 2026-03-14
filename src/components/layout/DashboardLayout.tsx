@@ -45,6 +45,7 @@ const navItems: Record<UserRole, NavItem[]> = {
     { label: 'Services', path: '/admin/services', icon: <Droplets className="w-5 h-5" /> },
     { label: 'Transactions', path: '/admin/transactions', icon: <FileText className="w-5 h-5" /> },
     { label: 'Approvals', path: '/admin/approvals', icon: <CheckCircle className="w-5 h-5" /> },
+    { label: 'Waitlist', path: '/admin/waitlist', icon: <BellRing className="w-5 h-5" /> },
   ],
 };
 

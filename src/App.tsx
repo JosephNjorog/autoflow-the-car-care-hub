@@ -47,6 +47,7 @@ import AdminBookings from "./pages/admin/AdminBookings";
 import AdminTransactions from "./pages/admin/AdminTransactions";
 import AdminServices from "./pages/admin/AdminServices";
 import AdminApprovals from "./pages/admin/AdminApprovals";
+import AdminWaitlist from "./pages/admin/AdminWaitlist";
 
 // Shared
 import SettingsPage from "./pages/SettingsPage";

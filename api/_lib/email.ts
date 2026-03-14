@@ -491,6 +491,68 @@ export async function sendLoyaltyMilestoneEmail(
   });
 }
 
+// ─── Waitlist Confirmation ────────────────────────────────────────────────────
+
+export async function sendWaitlistConfirmationEmail(
+  email: string,
+  name: string | null,
+  role: string,
+  tier: string | null
+): Promise<void> {
+  const firstName = name ? name.split(' ')[0] : 'there';
+  const tierLabel: Record<string, { label: string; desc: string }> = {
+    economy:     { label: 'Economy',     desc: 'Affordable everyday washes from KSh 300–1,000' },
+    first_class: { label: 'First Class', desc: 'Quality washes from KSh 1,000–2,000' },
+    premium:     { label: 'Premium',     desc: 'Full detailing & premium care from KSh 1,500–4,000' },
+  };
+
+  const roleMessages: Record<string, { headline: string; body: string; what: string }> = {
+    car_owner: {
+      headline: `You're on the list, ${firstName}! 🚗`,
+      body: `We're almost ready to launch. When we go live, you'll be among the first to book a car wash near you — pay with M-Pesa and get it done in minutes.`,
+      what: 'As a Car Owner you\'ll be able to browse nearby car washes, compare prices, book in seconds, and pay with M-Pesa or card.',
+    },
+    owner: {
+      headline: `Your car wash is almost on the map, ${firstName}! 🏢`,
+      body: `We're building the platform that will power your business. When we launch, you'll register your car wash, manage bookings, pay your team, and grow — all in one dashboard.`,
+      what: 'As a Business Owner you\'ll get your own dashboard to manage locations, services, staff, bookings, and payouts.',
+    },
+    detailer: {
+      headline: `Jobs are coming your way, ${firstName}! 🔧`,
+      body: `We're almost live. Once we launch, you'll be assigned jobs from nearby car washes, track your earnings, and get paid via M-Pesa — no chasing payments.`,
+      what: 'As a Detailer you\'ll manage your schedule, receive job notifications, upload before/after photos, and get your 40% payout automatically.',
+    },
+  };
+
+  const msg = roleMessages[role] || roleMessages.car_owner;
+  const tierInfo = tier ? tierLabel[tier] : null;
+
+  const content = `
+    <h1>${msg.headline}</h1>
+    <p>${msg.body}</p>
+    <div class="success-box">
+      <p>✅ <strong>You're on the waitlist.</strong><br /><br />We'll send you a personal email the moment AutoPayKe goes live — with a step-by-step guide to get you started immediately.</p>
+    </div>
+    ${tierInfo ? `
+    <div class="highlight-box">
+      <p>🏷️ <strong>${tierInfo.label} Tier selected</strong><br /><br />${tierInfo.desc}. Great choice — we'll make sure there are plenty of options in your range when we launch.</p>
+    </div>
+    ` : ''}
+    <hr class="divider" />
+    <p style="font-size:15px;font-weight:600;color:#0f172a;margin-bottom:8px;">What to expect when we launch</p>
+    <p style="font-size:14px;color:#475569;">${msg.what}</p>
+    <hr class="divider" />
+    <p style="font-size:13px;color:#94a3b8;">Follow our progress or tell a friend — the more people on the waitlist, the sooner we launch in your area. 🙌<br /><br />Questions? Reply to this email — we actually read every one.</p>
+  `;
+
+  await transporter.sendMail({
+    from: FROM,
+    to: email,
+    subject: `You're on the AutoPayKe waitlist!`,
+    html: emailLayout(content, `Welcome to the waitlist, ${firstName} — we'll be in touch when we go live.`),
+  });
+}
+
 // ─── Waitlist Announcement ────────────────────────────────────────────────────
 
 export async function sendWaitlistAnnouncementEmail(

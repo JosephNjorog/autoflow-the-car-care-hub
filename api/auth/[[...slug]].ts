@@ -8,6 +8,7 @@ import {
   sendWelcomeEmail,
   sendOwnerPendingEmail,
   sendPasswordReset,
+  sendWaitlistConfirmationEmail,
   sendWaitlistAnnouncementEmail,
 } from '../_lib/email';
 

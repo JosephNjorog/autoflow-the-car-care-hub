@@ -39,13 +39,13 @@ const tiers = [
   {
     name: 'Premium',
     price: 'KSh 1,000 – 2,500',
-    image: IMG.firstClass,
+    image: IMG.premium,
     services: ['Full exterior wash', 'Engine wash', 'Interior detailing', 'Tyre dressing'],
   },
   {
     name: 'First Class',
     price: 'KSh 2,500 – 6,000',
-    image: IMG.premium,
+    image: IMG.firstClass,
     services: ['Full detailing', 'Sumpguard wash', 'Paint protection', 'Leather treatment', 'Odor elimination'],
   },
 ];
@@ -462,6 +462,13 @@ export default function LandingPage() {
             variants={{ visible: { transition: { staggerChildren: 0.12 } } }}
             className="max-w-4xl"
           >
+            <motion.div variants={fadeUp} custom={0} className="mb-6">
+              <span className="inline-flex items-center gap-2 bg-foreground/10 backdrop-blur-sm border border-foreground/20 text-foreground text-sm font-medium px-4 py-2 rounded-full">
+                <Zap className="w-3.5 h-3.5 text-yellow-400" />
+                The Operating System for Car Wash Businesses
+              </span>
+            </motion.div>
+
             <motion.h1
               variants={fadeUp}
               custom={0.1}

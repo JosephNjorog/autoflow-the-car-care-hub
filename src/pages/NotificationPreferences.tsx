@@ -101,7 +101,7 @@ export default function NotificationPreferences() {
 
         {/* Push notification permission */}
         <div className="p-5 rounded-xl bg-card border border-border shadow-card">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-accent/10 text-accent"><Smartphone className="w-5 h-5" /></div>
               <div>

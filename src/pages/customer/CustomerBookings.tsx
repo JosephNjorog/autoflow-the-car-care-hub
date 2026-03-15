@@ -307,7 +307,7 @@ export default function CustomerBookings() {
           {confirmBooking?.afterPhotos?.length > 0 ? (
             <div>
               <p className="text-xs text-muted-foreground mb-2">After-service photos from the team:</p>
-              <div className="grid grid-cols-3 gap-2 mb-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
                 {confirmBooking.afterPhotos.slice(0, 6).map((url: string, i: number) => (
                   <button key={i} onClick={() => setLightboxPhotos(confirmBooking.afterPhotos)}
                     className="aspect-square rounded-lg overflow-hidden border border-border hover:border-primary transition-colors">

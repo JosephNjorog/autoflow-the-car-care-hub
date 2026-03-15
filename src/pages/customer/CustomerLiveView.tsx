@@ -129,7 +129,7 @@ export default function CustomerLiveView() {
             )}
           </div>
 
-          <div className="rounded-xl bg-card border border-border shadow-card overflow-hidden flex flex-col" style={{ height: '340px' }}>
+          <div className="rounded-xl bg-card border border-border shadow-card overflow-hidden flex flex-col h-64 sm:h-[340px]">
             <div className="p-3 border-b border-border flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-primary" />
               <span className="text-sm font-medium text-foreground">Chat with Detailer</span>

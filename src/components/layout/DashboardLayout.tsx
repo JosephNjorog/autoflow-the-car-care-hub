@@ -164,7 +164,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
                     <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}
-                      className="absolute right-0 top-12 w-80 sm:w-96 bg-card border border-border rounded-xl shadow-card-hover overflow-hidden z-50">
+                      className="fixed left-2 right-2 top-[4.5rem] sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:w-96 bg-card border border-border rounded-xl shadow-card-hover overflow-hidden z-50">
                       <div className="p-4 border-b border-border flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <h3 className="font-display text-sm">Notifications</h3>

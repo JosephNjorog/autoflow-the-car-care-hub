@@ -199,7 +199,8 @@ async function handleMpesaCallback(req: VercelRequest, res: VercelResponse) {
     const { CheckoutRequestID, ResultCode, ResultDesc, CallbackMetadata } = stkCallback;
 
     const [transaction] = await sql`
-      SELECT t.*, b.customer_id, s.owner_id, s.price
+      SELECT t.*, b.customer_id, b.payment_timing, b.status as booking_status,
+             s.owner_id, s.price
       FROM transactions t
       JOIN bookings b ON b.id = t.booking_id
       JOIN services s ON s.id = b.service_id
@@ -208,7 +209,7 @@ async function handleMpesaCallback(req: VercelRequest, res: VercelResponse) {
     if (!transaction) return res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });
 
     // Idempotency: skip if already processed
-    if (transaction.status === 'captured' || transaction.status === 'released') {
+    if (['captured', 'released', 'completed'].includes(transaction.status as string)) {
       return res.status(200).json({ ResultCode: 0, ResultDesc: 'Already processed' });
     }
 
@@ -217,36 +218,77 @@ async function handleMpesaCallback(req: VercelRequest, res: VercelResponse) {
       const getItem = (name: string) => items.find((i: MpesaCallbackItem) => i.Name === name)?.Value;
       const mpesaCode = getItem('MpesaReceiptNumber') as string;
       const amount    = getItem('Amount') as number;
+      const paid      = amount || parseFloat(transaction.amount as string);
 
       await sql`
         UPDATE transactions
         SET status = 'captured', mpesa_code = ${mpesaCode || null}, amount = COALESCE(${amount || null}, amount)
         WHERE mpesa_checkout_request_id = ${CheckoutRequestID}
       `;
-      await sql`
-        UPDATE bookings
-        SET payment_status = 'captured',
-            status = CASE WHEN status = 'pending' THEN 'confirmed' ELSE status END
-        WHERE id = ${transaction.booking_id}
-      `;
 
-      const paid = amount || parseFloat(transaction.amount as string);
-      await sql`
-        INSERT INTO notifications (user_id, title, message, type)
-        VALUES (${transaction.customer_id},
-          'Payment Received ✓',
-          ${'KES ' + paid + ' received via M-Pesa' + (mpesaCode ? ' (Code: ' + mpesaCode + ')' : '') + '. Funds held in escrow until you confirm service completion.'},
-          'payment')
-      `;
-      await sql`
-        INSERT INTO notifications (user_id, title, message, type)
-        SELECT s.owner_id,
-          'Payment Captured (Escrow)',
-          ${'KES ' + paid + ' M-Pesa payment captured for booking. Funds released when customer confirms service completion.'},
-          'payment'
-        FROM bookings b JOIN services s ON s.id = b.service_id
-        WHERE b.id = ${transaction.booking_id}
-      `;
+      // ── Pay-at-Pickup: service is already done → auto-complete escrow immediately ──
+      const isPickupPayment =
+        transaction.payment_timing === 'pickup' &&
+        transaction.booking_status === 'awaiting_confirmation';
+
+      if (isPickupPayment) {
+        // Funds captured → immediately release to merchant (< 1 min)
+        await sql`
+          UPDATE bookings
+          SET payment_status = 'released', status = 'completed', escrow_released_at = NOW()
+          WHERE id = ${transaction.booking_id}
+        `;
+        await sql`
+          UPDATE transactions SET status = 'completed'
+          WHERE booking_id = ${transaction.booking_id}
+        `;
+        await sql`
+          INSERT INTO notifications (user_id, title, message, type)
+          VALUES (${transaction.customer_id},
+            'Payment Confirmed ✓',
+            ${'KES ' + paid + ' paid via M-Pesa' + (mpesaCode ? ' (' + mpesaCode + ')' : '') + '. Thank you — your car wash is complete!'},
+            'payment')
+        `;
+        await sql`
+          INSERT INTO notifications (user_id, title, message, type)
+          SELECT s.owner_id, 'Payment Received & Released 💰',
+            ${'KES ' + Math.floor(paid * 0.9) + ' (90%) has been sent to your M-Pesa. AutoPayKe retained KES ' + Math.floor(paid * 0.1) + ' (10%) platform fee.'},
+            'payment'
+          FROM bookings b JOIN services s ON s.id = b.service_id
+          WHERE b.id = ${transaction.booking_id}
+        `;
+        // Trigger B2C payout immediately — non-blocking
+        payoutOwnerShare(
+          transaction.owner_id as string,
+          paid,
+          transaction.booking_id as string,
+          sql as never,
+        ).catch((err: unknown) => console.error('B2C payout error (pickup):', err));
+      } else {
+        // ── Pay-now: hold in escrow, release only when customer confirms ───────
+        await sql`
+          UPDATE bookings
+          SET payment_status = 'captured',
+              status = CASE WHEN status = 'pending' THEN 'confirmed' ELSE status END
+          WHERE id = ${transaction.booking_id}
+        `;
+        await sql`
+          INSERT INTO notifications (user_id, title, message, type)
+          VALUES (${transaction.customer_id},
+            'Payment Received ✓',
+            ${'KES ' + paid + ' received via M-Pesa' + (mpesaCode ? ' (Code: ' + mpesaCode + ')' : '') + '. Funds held in escrow until you confirm service completion.'},
+            'payment')
+        `;
+        await sql`
+          INSERT INTO notifications (user_id, title, message, type)
+          SELECT s.owner_id,
+            'Payment Captured (Escrow) 🔒',
+            ${'KES ' + paid + ' M-Pesa payment captured. Funds will be released (90% to you) when the customer confirms service completion.'},
+            'payment'
+          FROM bookings b JOIN services s ON s.id = b.service_id
+          WHERE b.id = ${transaction.booking_id}
+        `;
+      }
     } else {
       await sql`UPDATE transactions SET status = 'failed' WHERE mpesa_checkout_request_id = ${CheckoutRequestID}`;
       await sql`

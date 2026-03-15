@@ -462,13 +462,6 @@ export default function LandingPage() {
             variants={{ visible: { transition: { staggerChildren: 0.12 } } }}
             className="max-w-4xl"
           >
-            <motion.div variants={fadeUp} custom={0} className="mb-6">
-              <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-border text-xs font-medium text-muted-foreground">
-                <span className="w-1.5 h-1.5 rounded-full bg-foreground/60 animate-pulse" />
-                The Operating System for Car Wash Businesses
-              </span>
-            </motion.div>
-
             <motion.h1
               variants={fadeUp}
               custom={0.1}

@@ -66,30 +66,46 @@ export default function OwnerDashboard() {
         {recentBookings.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 text-center">No bookings yet.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left pb-3 font-medium text-muted-foreground">Customer</th>
-                  <th className="text-left pb-3 font-medium text-muted-foreground">Service</th>
-                  <th className="text-left pb-3 font-medium text-muted-foreground hidden md:table-cell">Date</th>
-                  <th className="text-left pb-3 font-medium text-muted-foreground">Status</th>
-                  <th className="text-right pb-3 font-medium text-muted-foreground">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentBookings.map((b: any) => (
-                  <tr key={b.id} className="border-b border-border last:border-0">
-                    <td className="py-3 text-foreground">{b.customerName}</td>
-                    <td className="py-3 text-foreground">{b.serviceName}</td>
-                    <td className="py-3 text-muted-foreground hidden md:table-cell">{b.date}</td>
-                    <td className="py-3"><span className={`text-xs font-medium capitalize ${b.status === 'completed' ? 'text-success' : b.status === 'pending' ? 'text-warning' : 'text-primary'}`}>{b.status.replace('_', ' ')}</span></td>
-                    <td className="py-3 text-right font-display text-foreground">KES {(b.servicePrice || 0).toLocaleString()}</td>
+          <>
+            <div className="sm:hidden space-y-2">
+              {recentBookings.map((b: any) => (
+                <div key={b.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{b.customerName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{b.serviceName}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className={`text-xs font-medium capitalize ${b.status === 'completed' ? 'text-success' : b.status === 'pending' ? 'text-warning' : 'text-primary'}`}>{b.status.replace('_', ' ')}</span>
+                    <p className="text-sm font-display text-foreground">KES {(b.servicePrice || 0).toLocaleString()}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left pb-3 font-medium text-muted-foreground">Customer</th>
+                    <th className="text-left pb-3 font-medium text-muted-foreground">Service</th>
+                    <th className="text-left pb-3 font-medium text-muted-foreground hidden md:table-cell">Date</th>
+                    <th className="text-left pb-3 font-medium text-muted-foreground">Status</th>
+                    <th className="text-right pb-3 font-medium text-muted-foreground">Amount</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {recentBookings.map((b: any) => (
+                    <tr key={b.id} className="border-b border-border last:border-0">
+                      <td className="py-3 text-foreground">{b.customerName}</td>
+                      <td className="py-3 text-foreground">{b.serviceName}</td>
+                      <td className="py-3 text-muted-foreground hidden md:table-cell">{b.date}</td>
+                      <td className="py-3"><span className={`text-xs font-medium capitalize ${b.status === 'completed' ? 'text-success' : b.status === 'pending' ? 'text-warning' : 'text-primary'}`}>{b.status.replace('_', ' ')}</span></td>
+                      <td className="py-3 text-right font-display text-foreground">KES {(b.servicePrice || 0).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </DashboardLayout>

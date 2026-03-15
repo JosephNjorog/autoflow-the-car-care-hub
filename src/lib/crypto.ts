@@ -62,14 +62,26 @@ const ERC20_ABI = [
   'function allowance(address owner, address spender) view returns (uint256)',
 ];
 
-// AutoFlowPayments smart contract — deployed on Avalanche C-Chain
-// Set VITE_AUTOFLOW_CONTRACT in env vars after deploying contracts/AutoFlowPayments.sol
+// AutoFlowPayments (legacy direct-split) — set VITE_AUTOFLOW_CONTRACT to use
 const AUTOFLOW_CONTRACT_ADDRESS = import.meta.env.VITE_AUTOFLOW_CONTRACT as string | undefined;
-
 const AUTOFLOW_CONTRACT_ABI = [
   'function payWithToken(string calldata bookingId, address businessWallet, address tokenAddress, uint256 amount) external',
   'function payWithAVAX(string calldata bookingId, address businessWallet) external payable',
   'function previewSplit(uint256 amount) external view returns (uint256 businessAmount, uint256 platformFee)',
+];
+
+// AutoFlowEscrow — set VITE_AUTOFLOW_ESCROW to use on-chain escrow
+// Deploy contracts/AutoFlowEscrow.sol and set VITE_AUTOFLOW_ESCROW=<address>
+const AUTOFLOW_ESCROW_ADDRESS = import.meta.env.VITE_AUTOFLOW_ESCROW as string | undefined;
+const AUTOFLOW_ESCROW_ABI = [
+  'function depositEscrow(bytes32 bookingId, address merchant, address token, uint256 amount) external',
+  'function releaseEscrow(bytes32 bookingId) external',
+  'function refundEscrow(bytes32 bookingId) external',
+  'function autoRelease(bytes32 bookingId) external',
+  'function getEscrow(bytes32 bookingId) external view returns (address customer, address merchant, address token, uint256 amount, uint64 depositedAt, uint8 status)',
+  'function previewSplit(uint256 amount) external view returns (uint256 merchantAmount, uint256 platformFee)',
+  'event EscrowDeposited(bytes32 indexed bookingId, address indexed customer, address indexed merchant, address token, uint256 amount, uint256 timestamp)',
+  'event EscrowReleased(bytes32 indexed bookingId, uint256 merchantAmount, uint256 platformFee, uint256 timestamp)',
 ];
 
 /** SnowTrace explorer base URL for the current network */

@@ -58,7 +58,7 @@ export default function NotificationPreferences() {
 
       <div className="max-w-3xl space-y-6">
         {/* Channel legend */}
-        <div className="flex items-center gap-6 p-4 rounded-xl bg-card border border-border shadow-card">
+        <div className="hidden sm:flex items-center gap-6 p-4 rounded-xl bg-card border border-border shadow-card">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Bell className="w-4 h-4" /> <span>In-App</span>
           </div>
@@ -81,17 +81,17 @@ export default function NotificationPreferences() {
                   <p className="text-xs text-muted-foreground">{pref.description}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <Label className="text-xs text-muted-foreground w-10">In-App</Label>
+              <div className="flex items-center gap-3 sm:gap-6">
+                <div className="flex flex-col items-center gap-1 sm:flex-row sm:gap-2">
+                  <Label className="text-[10px] sm:text-xs text-muted-foreground sm:w-10"><Bell className="w-3 h-3 sm:hidden" /><span className="hidden sm:inline">In-App</span></Label>
                   <Switch checked={pref.inApp} onCheckedChange={() => togglePref(pref.id, 'inApp')} />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Label className="text-xs text-muted-foreground w-10">Email</Label>
+                <div className="flex flex-col items-center gap-1 sm:flex-row sm:gap-2">
+                  <Label className="text-[10px] sm:text-xs text-muted-foreground sm:w-10"><Mail className="w-3 h-3 sm:hidden" /><span className="hidden sm:inline">Email</span></Label>
                   <Switch checked={pref.email} onCheckedChange={() => togglePref(pref.id, 'email')} />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Label className="text-xs text-muted-foreground w-10">Push</Label>
+                <div className="flex flex-col items-center gap-1 sm:flex-row sm:gap-2">
+                  <Label className="text-[10px] sm:text-xs text-muted-foreground sm:w-10"><Smartphone className="w-3 h-3 sm:hidden" /><span className="hidden sm:inline">Push</span></Label>
                   <Switch checked={pref.push} onCheckedChange={() => togglePref(pref.id, 'push')} />
                 </div>
               </div>

@@ -66,12 +66,29 @@ async function handleMpesaStk(req: VercelRequest, res: VercelResponse) {
       `AutoPayKe: ${booking.service_name} at ${booking.location_name}`,
     );
 
-    await sql`
+    // Save checkout ID — upsert so it's always stored even on retry
+    const saved = await sql`
       UPDATE transactions SET
         mpesa_checkout_request_id = ${result.checkoutRequestId},
-        mpesa_merchant_request_id = ${result.merchantRequestId}
+        mpesa_merchant_request_id = ${result.merchantRequestId},
+        status = CASE WHEN status = 'failed' THEN 'pending' ELSE status END
       WHERE booking_id = ${bookingId}
+        AND status NOT IN ('captured', 'released', 'completed')
+      RETURNING id
     `;
+    if (saved.length === 0) {
+      // No updatable transaction row — insert a fresh one
+      await sql`
+        INSERT INTO transactions
+          (booking_id, customer_id, amount, method, status,
+           mpesa_checkout_request_id, mpesa_merchant_request_id)
+        SELECT ${bookingId}, b.customer_id, s.price, 'mpesa', 'pending',
+               ${result.checkoutRequestId}, ${result.merchantRequestId}
+        FROM bookings b
+        JOIN services s ON s.id = b.service_id
+        WHERE b.id = ${bookingId}
+      `;
+    }
 
     return res.status(200).json({
       message: 'STK Push sent — please enter your M-Pesa PIN.',

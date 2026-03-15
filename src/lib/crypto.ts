@@ -241,11 +241,20 @@ export async function sendCryptoPaymentInjected(
   return (receipt as { hash: string }).hash;
 }
 
-// ─── Injected Wallet: Split payment (10% AutoPayKe, 90% owner) ───────────────
-// Uses the AutoFlowPayments smart contract if VITE_AUTOFLOW_CONTRACT is set,
-// otherwise falls back to two direct transfers.
+// ─── Convert booking UUID string → bytes32 for the escrow contract ───────────
+function bookingIdToBytes32(bookingId: string): string {
+  // Encode as UTF-8 bytes padded to 32 bytes (right-padded with zeros)
+  const encoder = new TextEncoder();
+  const bytes   = encoder.encode(bookingId.replace(/-/g, '').slice(0, 32));
+  const hex     = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  return '0x' + hex.padEnd(64, '0');
+}
 
-async function sendSplitPaymentInjected(
+// ─── Injected Wallet: Escrow deposit (preferred path via AutoFlowEscrow) ─────
+// Uses AutoFlowEscrow contract if VITE_AUTOFLOW_ESCROW is set.
+// Falls back to AutoFlowPayments direct split, then to two raw transfers.
+
+async function sendEscrowDepositInjected(
   token: 'usdt' | 'usdc',
   totalUsdAmount: number,
   autoflowWallet: string,
@@ -255,16 +264,16 @@ async function sendSplitPaymentInjected(
   if (!window.ethereum) throw new Error('No wallet found.');
   const tokenInfo = TOKENS[token];
 
-  const provider = new BrowserProvider(window.ethereum);
-  const signer   = await provider.getSigner();
-  const erc20    = new Contract(tokenInfo.address, ERC20_ABI, signer);
+  const provider  = new BrowserProvider(window.ethereum);
+  const signer    = await provider.getSigner();
+  const erc20     = new Contract(tokenInfo.address, ERC20_ABI, signer);
 
   const totalInUnits = parseUnits(totalUsdAmount.toFixed(6), tokenInfo.decimals);
   const address      = await signer.getAddress();
   const balance      = await erc20.balanceOf(address) as bigint;
 
   if (balance < totalInUnits) {
-    const balFmt    = (Number(balance) / 10 ** tokenInfo.decimals).toFixed(2);
+    const balFmt     = (Number(balance) / 10 ** tokenInfo.decimals).toFixed(2);
     const faucetHint = USE_TESTNET
       ? ' Get test tokens at faucet.circle.com (Avalanche Fuji).'
       : '';
@@ -273,33 +282,80 @@ async function sendSplitPaymentInjected(
     );
   }
 
-  const ownerTarget = ownerWallet && ownerWallet !== '0x0000000000000000000000000000000000000000'
+  const merchantWallet = ownerWallet && ownerWallet !== '0x0000000000000000000000000000000000000000'
     ? ownerWallet
     : autoflowWallet;
 
-  // ── Path A: Smart contract (atomic, one approval + one tx) ─────────────────
+  // ── Path A: AutoFlowEscrow (on-chain escrow, release on customer confirm) ──
+  if (AUTOFLOW_ESCROW_ADDRESS) {
+    // Step 1: Approve escrow contract to pull tokens
+    const approveTx = await erc20.approve(AUTOFLOW_ESCROW_ADDRESS, totalInUnits);
+    await approveTx.wait();
+
+    // Step 2: Deposit into escrow — funds locked until release/refund
+    const escrowContract = new Contract(AUTOFLOW_ESCROW_ADDRESS, AUTOFLOW_ESCROW_ABI, signer);
+    const bookingBytes32 = bookingIdToBytes32(bookingId);
+    const depositTx = await escrowContract.depositEscrow(
+      bookingBytes32,
+      merchantWallet,
+      tokenInfo.address,
+      totalInUnits,
+    );
+    const receipt = await depositTx.wait();
+    return (receipt as { hash: string }).hash;
+  }
+
+  // ── Path B: AutoFlowPayments (legacy — immediate 90/10 split) ──────────────
   if (AUTOFLOW_CONTRACT_ADDRESS) {
-    // Approve the contract to pull the full amount
     const approveTx = await erc20.approve(AUTOFLOW_CONTRACT_ADDRESS, totalInUnits);
     await approveTx.wait();
 
-    // Call payWithToken — contract splits 90/10 atomically
     const payContract = new Contract(AUTOFLOW_CONTRACT_ADDRESS, AUTOFLOW_CONTRACT_ABI, signer);
-    const payTx = await payContract.payWithToken(bookingId, ownerTarget, tokenInfo.address, totalInUnits);
+    const payTx = await payContract.payWithToken(bookingId, merchantWallet, tokenInfo.address, totalInUnits);
     const receipt = await payTx.wait();
     return (receipt as { hash: string }).hash;
   }
 
-  // ── Path B: Fallback — two direct ERC-20 transfers ────────────────────────
+  // ── Path C: Two direct ERC-20 transfers (no contract deployed) ─────────────
   const autoflowAmount = parseUnits((totalUsdAmount * 0.10).toFixed(6), tokenInfo.decimals);
   const ownerAmount    = parseUnits((totalUsdAmount * 0.90).toFixed(6), tokenInfo.decimals);
 
   const tx1 = await erc20.transfer(autoflowWallet, autoflowAmount);
   await tx1.wait();
 
-  const tx2 = await erc20.transfer(ownerTarget, ownerAmount);
+  const tx2 = await erc20.transfer(merchantWallet, ownerAmount);
   const receipt2 = await tx2.wait();
   return (receipt2 as { hash: string }).hash;
+}
+
+// ─── Release escrow (customer confirms service from their wallet) ─────────────
+/**
+ * Called from the frontend when a customer confirms service completion.
+ * Releases 90% to merchant and 10% to treasury on-chain.
+ * Only used when VITE_AUTOFLOW_ESCROW is set.
+ */
+export async function releaseEscrowOnChain(bookingId: string): Promise<string | null> {
+  if (!AUTOFLOW_ESCROW_ADDRESS || !window.ethereum) return null;
+
+  const provider       = new BrowserProvider(window.ethereum);
+  const signer         = await provider.getSigner();
+  const escrowContract = new Contract(AUTOFLOW_ESCROW_ADDRESS, AUTOFLOW_ESCROW_ABI, signer);
+  const bookingBytes32 = bookingIdToBytes32(bookingId);
+
+  const tx      = await escrowContract.releaseEscrow(bookingBytes32);
+  const receipt = await tx.wait();
+  return (receipt as { hash: string }).hash;
+}
+
+// Keep old export name for any callers
+async function sendSplitPaymentInjected(
+  token: 'usdt' | 'usdc',
+  totalUsdAmount: number,
+  autoflowWallet: string,
+  ownerWallet: string,
+  bookingId = 'unknown',
+): Promise<string> {
+  return sendEscrowDepositInjected(token, totalUsdAmount, autoflowWallet, ownerWallet, bookingId);
 }
 
 // ─── Payment Steps ────────────────────────────────────────────────────────────

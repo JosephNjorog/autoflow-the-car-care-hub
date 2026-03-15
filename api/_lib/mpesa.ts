@@ -118,6 +118,68 @@ export async function initiateStkPush(
   };
 }
 
+// ── STK Push Query (check payment status directly from Safaricom) ─────────────
+/**
+ * Queries Safaricom's Daraja API to check the status of an STK Push.
+ * Use this as a fallback when the callback URL was not reached.
+ *
+ * ResultCode 0      = Payment successful
+ * ResultCode 1032   = Cancelled by user
+ * ResultCode 1037   = DS timeout (no user response)
+ * ResultCode 1      = Insufficient funds
+ * ResultCode 2001   = Wrong PIN
+ */
+export interface StkQueryResult {
+  resultCode: number;
+  resultDesc: string;
+  merchantRequestId: string;
+  checkoutRequestId: string;
+  amount?: number;
+  mpesaCode?: string;
+}
+
+export async function queryStkPushStatus(
+  checkoutRequestId: string,
+): Promise<StkQueryResult> {
+  const shortcode = process.env.MPESA_SHORTCODE!;
+  const passkey   = process.env.MPESA_PASSKEY!;
+  const timestamp = formatTimestamp();
+  const password  = Buffer.from(`${shortcode}${passkey}${timestamp}`).toString('base64');
+
+  const token = await getMpesaAccessToken();
+  const res   = await fetch(`${MPESA_BASE}/mpesa/stkpushquery/v1/query`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({
+      BusinessShortCode: shortcode,
+      Password:          password,
+      Timestamp:         timestamp,
+      CheckoutRequestID: checkoutRequestId,
+    }),
+  });
+
+  const data = await res.json() as {
+    ResponseCode:       string;
+    ResultCode:         string | number;
+    ResultDesc:         string;
+    MerchantRequestID:  string;
+    CheckoutRequestID:  string;
+    CallbackMetadata?:  { Item: Array<{ Name: string; Value: string | number }> };
+  };
+
+  const getItem = (name: string) =>
+    data.CallbackMetadata?.Item?.find(i => i.Name === name)?.Value;
+
+  return {
+    resultCode:        Number(data.ResultCode ?? -1),
+    resultDesc:        data.ResultDesc || '',
+    merchantRequestId: data.MerchantRequestID || '',
+    checkoutRequestId: data.CheckoutRequestID || checkoutRequestId,
+    amount:            getItem('Amount') as number | undefined,
+    mpesaCode:         getItem('MpesaReceiptNumber') as string | undefined,
+  };
+}
+
 // ── B2C Payout ────────────────────────────────────────────────────────────────
 /**
  * Sends money from AutoPayKe's shortcode to the owner's M-Pesa phone.

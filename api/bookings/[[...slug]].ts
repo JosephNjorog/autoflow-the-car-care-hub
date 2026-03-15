@@ -215,6 +215,11 @@ async function handleById(req: VercelRequest, res: VercelResponse, id: string) {
     if (confirmPickup) {
       if (auth.role !== 'customer' || booking.customer_id !== auth.userId)
         return res.status(403).json({ error: 'Only the customer can confirm service completion' });
+      // Idempotent: if already completed (e.g. auto-released for pay-at-pickup), return success
+      if (booking.status === 'completed') {
+        const [already] = await rawSql(`${BOOKING_QUERY} WHERE b.id = $1`, [id]);
+        return res.status(200).json(mapBooking(already));
+      }
       if (booking.status !== 'awaiting_confirmation')
         return res.status(400).json({ error: 'Service is not awaiting confirmation' });
 

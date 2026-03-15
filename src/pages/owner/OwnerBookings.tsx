@@ -61,20 +61,25 @@ function CalendarView({ bookings }: { bookings: any[] }) {
           <button onClick={() => setCurrentDate(new Date(year, month + 1, 1))} className="p-2 rounded-lg hover:bg-muted transition-colors"><ChevronRight className="w-5 h-5 text-muted-foreground" /></button>
         </div>
         <div className="grid grid-cols-7 border-b border-border">
-          {dayLabels.map(d => <div key={d} className="p-2 text-center text-xs font-medium text-muted-foreground">{d}</div>)}
+          {dayLabels.map(d => (
+            <div key={d} className="p-1 sm:p-2 text-center text-[10px] sm:text-xs font-medium text-muted-foreground">
+              <span className="sm:hidden">{d[0]}</span>
+              <span className="hidden sm:inline">{d}</span>
+            </div>
+          ))}
         </div>
         <div className="grid grid-cols-7">
           {days.map((day, i) => {
-            if (day === null) return <div key={`e-${i}`} className="p-2 min-h-[80px] border-b border-r border-border bg-muted/20" />;
+            if (day === null) return <div key={`e-${i}`} className="p-1 sm:p-2 min-h-[44px] sm:min-h-[80px] border-b border-r border-border bg-muted/20" />;
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const dayBookings = bookingsByDate[dateStr] || [];
             const isSelected = selectedDay === dateStr;
             const isToday = dateStr === todayStr;
             return (
               <button key={day} onClick={() => setSelectedDay(isSelected ? null : dateStr)}
-                className={`p-1.5 md:p-2 min-h-[80px] border-b border-r border-border text-left transition-colors hover:bg-muted/50 ${isSelected ? 'bg-primary/5 ring-1 ring-primary' : ''}`}>
-                <span className={`text-xs font-medium inline-flex items-center justify-center w-6 h-6 rounded-full ${isToday ? 'bg-primary text-primary-foreground' : 'text-foreground'}`}>{day}</span>
-                <div className="mt-1 space-y-0.5">
+                className={`p-1 sm:p-1.5 md:p-2 min-h-[44px] sm:min-h-[80px] border-b border-r border-border text-left transition-colors hover:bg-muted/50 ${isSelected ? 'bg-primary/5 ring-1 ring-primary' : ''}`}>
+                <span className={`text-[10px] sm:text-xs font-medium inline-flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full ${isToday ? 'bg-primary text-primary-foreground' : 'text-foreground'}`}>{day}</span>
+                <div className="mt-0.5 sm:mt-1 space-y-0.5 hidden sm:block">
                   {dayBookings.slice(0, 3).map((b: any) => (
                     <div key={b.id} className={`text-[10px] md:text-xs px-1.5 py-0.5 rounded border truncate ${statusColors[b.status]}`}>
                       <span className="hidden md:inline">{b.time} </span>{b.serviceName}
@@ -82,6 +87,11 @@ function CalendarView({ bookings }: { bookings: any[] }) {
                   ))}
                   {dayBookings.length > 3 && <div className="text-[10px] text-muted-foreground px-1.5">+{dayBookings.length - 3} more</div>}
                 </div>
+                {dayBookings.length > 0 && (
+                  <div className="sm:hidden mt-0.5 flex justify-center">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  </div>
+                )}
               </button>
             );
           })}

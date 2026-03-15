@@ -332,18 +332,83 @@ async function handleStatus(req: VercelRequest, res: VercelResponse) {
   if (!bookingId) return res.status(400).json({ error: 'bookingId required' });
 
   const [t] = await sql`
-    SELECT t.status, t.mpesa_code, t.amount, b.payment_status, b.status as booking_status
+    SELECT t.id, t.status, t.mpesa_code, t.amount, t.mpesa_checkout_request_id,
+           b.payment_status, b.status as booking_status, b.payment_timing
     FROM transactions t JOIN bookings b ON b.id = t.booking_id
     WHERE t.booking_id = ${bookingId as string}
     ORDER BY t.created_at DESC LIMIT 1
   `;
   if (!t) return res.status(404).json({ error: 'Transaction not found' });
+
+  // ── Daraja fallback: if still pending and we have a checkout ID, query Safaricom directly ──
+  // This heals missed callbacks — Safaricom may not reach our server in some network conditions
+  if (
+    t.status === 'pending' &&
+    t.mpesa_checkout_request_id &&
+    !['captured', 'released', 'completed'].includes(t.payment_status as string)
+  ) {
+    try {
+      const darajaResult = await queryStkPushStatus(t.mpesa_checkout_request_id as string);
+      if (darajaResult.resultCode === 0) {
+        // Payment succeeded at Safaricom but callback never reached us — process it now
+        const paid   = darajaResult.amount || parseFloat(t.amount as string);
+        const code   = darajaResult.mpesaCode || null;
+
+        await sql`
+          UPDATE transactions SET status = 'captured',
+            mpesa_code = ${code},
+            amount     = ${paid}
+          WHERE id = ${t.id}
+        `;
+
+        const isPickup =
+          t.payment_timing === 'pickup' &&
+          t.booking_status === 'awaiting_confirmation';
+
+        if (isPickup) {
+          await sql`
+            UPDATE bookings SET payment_status = 'released', status = 'completed',
+              escrow_released_at = NOW()
+            WHERE id = ${bookingId as string}
+          `;
+          await sql`UPDATE transactions SET status = 'completed' WHERE id = ${t.id}`;
+          // Trigger B2C payout
+          const [svc] = await sql`
+            SELECT s.owner_id FROM bookings b JOIN services s ON s.id = b.service_id
+            WHERE b.id = ${bookingId as string}
+          `;
+          if (svc) {
+            payoutOwnerShare(svc.owner_id as string, paid, bookingId as string, sql as never)
+              .catch((err: unknown) => console.error('B2C payout fallback error:', err));
+          }
+          return res.status(200).json({
+            paymentStatus: 'released', transactionStatus: 'completed',
+            mpesaCode: code, amount: paid, bookingStatus: 'completed',
+          });
+        } else {
+          await sql`
+            UPDATE bookings SET payment_status = 'captured',
+              status = CASE WHEN status = 'pending' THEN 'confirmed' ELSE status END
+            WHERE id = ${bookingId as string}
+          `;
+          return res.status(200).json({
+            paymentStatus: 'captured', transactionStatus: 'captured',
+            mpesaCode: code, amount: paid, bookingStatus: t.booking_status,
+          });
+        }
+      }
+    } catch (_err) {
+      // Daraja query failed (e.g. sandbox restrictions) — fall through to return DB state
+      console.warn('Daraja STK query failed for', t.mpesa_checkout_request_id, _err);
+    }
+  }
+
   return res.status(200).json({
-    paymentStatus:    t.payment_status,
+    paymentStatus:     t.payment_status,
     transactionStatus: t.status,
-    mpesaCode:        t.mpesa_code,
-    amount:           parseFloat(t.amount as string),
-    bookingStatus:    t.booking_status,
+    mpesaCode:         t.mpesa_code,
+    amount:            parseFloat(t.amount as string),
+    bookingStatus:     t.booking_status,
   });
 }
 
@@ -411,10 +476,15 @@ async function handleMpesaStkPickup(req: VercelRequest, res: VercelResponse) {
   if (booking.status !== 'awaiting_confirmation') return res.status(400).json({ error: 'Service must be complete before payment' });
   if (['captured', 'released'].includes(booking.payment_status as string)) return res.status(400).json({ error: 'Already paid' });
 
+  // Ensure a transaction row exists (reset to pending if previously failed)
   await sql`
     INSERT INTO transactions (booking_id, customer_id, amount, method, status)
     VALUES (${bookingId}, ${auth.userId}, ${booking.price}, 'mpesa', 'pending')
     ON CONFLICT DO NOTHING
+  `;
+  await sql`
+    UPDATE transactions SET status = 'pending'
+    WHERE booking_id = ${bookingId} AND status = 'failed'
   `;
 
   try {
@@ -425,12 +495,22 @@ async function handleMpesaStkPickup(req: VercelRequest, res: VercelResponse) {
       `AutoPayKe Pickup: ${booking.service_name} at ${booking.location_name}`,
     );
 
-    await sql`
+    const saved = await sql`
       UPDATE transactions SET
         mpesa_checkout_request_id = ${result.checkoutRequestId},
         mpesa_merchant_request_id = ${result.merchantRequestId}
       WHERE booking_id = ${bookingId} AND status = 'pending'
+      RETURNING id
     `;
+    if (saved.length === 0) {
+      await sql`
+        INSERT INTO transactions
+          (booking_id, customer_id, amount, method, status,
+           mpesa_checkout_request_id, mpesa_merchant_request_id)
+        VALUES (${bookingId}, ${auth.userId}, ${booking.price}, 'mpesa', 'pending',
+                ${result.checkoutRequestId}, ${result.merchantRequestId})
+      `;
+    }
 
     return res.status(200).json({
       message: 'STK Push sent — enter your M-Pesa PIN.',

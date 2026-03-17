@@ -40,6 +40,13 @@ export function requireAuth(
   }
 }
 
+// Optional auth — returns payload if token present and valid, null otherwise (no 401 sent)
+export function optionalAuth(req: VercelRequest): TokenPayload | null {
+  const token = getTokenFromHeader(req);
+  if (!token) return null;
+  try { return verifyToken(token); } catch { return null; }
+}
+
 export function requireRole(
   req: VercelRequest,
   res: VercelResponse,

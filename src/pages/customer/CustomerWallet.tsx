@@ -372,6 +372,11 @@ export default function CustomerWallet() {
                         <p className="text-xs text-muted-foreground">MetaMask · Core · Trust · Coinbase</p>
                       </div>
                     </div>
+                    {/* WalletConnect v2 — shows QR on desktop, deep links on mobile */}
+                    <div className="mb-4 p-4 rounded-xl border border-border bg-background">
+                      <p className="text-xs text-muted-foreground mb-3">Connect via WalletConnect (works with 400+ wallets)</p>
+                      <ConnectWallet size="default" variant="default" className="w-full" label="Connect with WalletConnect" />
+                    </div>
 
                     {injectedAddress ? (
                       <>

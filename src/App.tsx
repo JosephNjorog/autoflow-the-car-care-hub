@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 
 // Public pages
 import LandingPage from "./pages/LandingPage";
+import GuestBook from "./pages/GuestBook";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";

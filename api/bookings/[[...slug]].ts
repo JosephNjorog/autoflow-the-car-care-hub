@@ -235,8 +235,9 @@ async function handleById(req: VercelRequest, res: VercelResponse, id: string) {
         await sql`UPDATE transactions SET status = 'completed' WHERE booking_id = ${id}`;
       }
 
-      // Loyalty points (10 per KES 100 spent, min 10)
-      const points = 10;
+      // Loyalty points: 10 KSh = 1 AP point
+      const [svcRow] = await sql`SELECT s.price FROM bookings b JOIN services s ON s.id = b.service_id WHERE b.id = ${id}`;
+      const points = Math.max(1, Math.floor(parseFloat(svcRow?.price || '0') / 10));
       await sql`
         INSERT INTO loyalty_points (customer_id, booking_id, points, description)
         VALUES (${booking.customer_id}, ${id}, ${points}, 'Service confirmed by customer')
@@ -303,10 +304,10 @@ async function handleById(req: VercelRequest, res: VercelResponse, id: string) {
 
       // Admin/legacy force-complete (bypasses escrow — keeps backward compat)
       if (status === 'completed') {
-        const points = 10;
+        // 10 KSh = 1 AP point
         await sql`
           INSERT INTO loyalty_points (customer_id, booking_id, points, description)
-          SELECT b.customer_id, b.id, ${points}, s.name || ' completed'
+          SELECT b.customer_id, b.id, GREATEST(1, FLOOR(s.price / 10)::int), s.name || ' completed'
           FROM bookings b JOIN services s ON s.id = b.service_id WHERE b.id = ${id}
         `;
         await sql`UPDATE bookings SET payment_status = 'completed', escrow_released_at = NOW() WHERE id = ${id}`;

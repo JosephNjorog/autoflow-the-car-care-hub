@@ -3,10 +3,12 @@ import { sql } from '../_lib/db';
 import { requireAuth } from '../_lib/auth';
 import { handleCors } from '../_lib/cors';
 
+// 10 KSh = 1 AP point. Tier thresholds (AP points):
+// Bronze: 0 | Silver: 500 (KES 5k spent) | Gold: 2000 (KES 20k) | Platinum: 5000 (KES 50k)
 const TIERS = [
-  { name: 'Bronze', min: 0 },
-  { name: 'Silver', min: 1000 },
-  { name: 'Gold', min: 3000 },
+  { name: 'Bronze',   min: 0 },
+  { name: 'Silver',   min: 500 },
+  { name: 'Gold',     min: 2000 },
   { name: 'Platinum', min: 5000 },
 ];
 

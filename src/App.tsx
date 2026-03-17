@@ -11,6 +11,11 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
+import { WagmiProvider } from "wagmi";
+import { wagmiConfig, getAppKit } from "@/lib/walletconnect";
+
+// Initialise AppKit (WalletConnect v2) once at module load
+getAppKit();
 
 // Public pages
 import LandingPage from "./pages/LandingPage";
@@ -93,6 +98,7 @@ const App = () => {
 
   return (
   <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+    <WagmiProvider config={wagmiConfig}>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         {!splashDone && <SplashScreen onDone={handleSplashDone} />}

@@ -37,16 +37,16 @@ const tiers = [
     services: ['Exterior rinse', 'Tire rinse', 'Basic interior wipe', 'Window clean'],
   },
   {
-    name: 'Premium',
-    price: 'KSh 1,000 – 2,500',
+    name: 'Premium Economy',
+    price: 'KSh 1,050 – 2,000',
     image: IMG.premium,
-    services: ['Full exterior wash', 'Engine wash', 'Interior detailing', 'Tyre dressing'],
+    services: ['Foam wash + wax', 'Rim polish', 'Full vacuum', 'Dashboard polish', 'Window cleaning'],
   },
   {
     name: 'First Class',
-    price: 'KSh 2,500 – 6,000',
+    price: 'KSh 2,050 – 6,000+',
     image: IMG.firstClass,
-    services: ['Full detailing', 'Sumpguard wash', 'Paint protection', 'Leather treatment', 'Odor elimination'],
+    services: ['Full detailing', 'Paint protection', 'Engine bay clean', 'Ceramic coating', 'Lounge access'],
   },
 ];
 
@@ -83,7 +83,7 @@ const WL_ROLES = [
   { id: 'detailer',    label: 'Detailer',         icon: <Wrench className="w-5 h-5" />,    desc: 'I want to find jobs' },
 ] as const;
 
-const WL_TIERS = ['Economy', 'Premium', 'First Class'] as const;
+const WL_TIERS = ['Economy', 'Premium Economy', 'First Class'] as const;
 
 // ─── Multi-step Waitlist ──────────────────────────────────────────────────────
 function WaitlistForm() {

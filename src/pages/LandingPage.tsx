@@ -472,9 +472,9 @@ export default function LandingPage() {
             <motion.h1
               variants={fadeUp}
               custom={0.1}
-              className="text-[clamp(3.5rem,10vw,8rem)] font-bold leading-[1.0] tracking-[-0.03em] text-foreground mb-6"
+              className="text-[clamp(3.5rem,10vw,8rem)] font-bold leading-[1.0] tracking-[-0.03em] text-foreground mb-4"
             >
-              Book. Wash.<br />Track. Earn.
+              Wash and Earn<br />Loyalty Points.
             </motion.h1>
 
             <motion.p
@@ -482,16 +482,16 @@ export default function LandingPage() {
               custom={0.2}
               className="text-base md:text-lg text-muted-foreground max-w-xl leading-relaxed mb-10"
             >
-              AutoPayKe connects car owners to verified car washes nearby while giving operators the tools to verify services, automate payments, and reward loyalty.
+              Find a nearby car wash, book in seconds, and earn rewards every time.
             </motion.p>
 
             <motion.div variants={fadeUp} custom={0.3} className="flex flex-col sm:flex-row gap-3">
               <Button
                 size="lg"
                 className="bg-foreground text-background hover:bg-foreground/90 font-semibold px-7 text-base h-12 rounded-xl"
-                onClick={() => navigate('/register')}
+                onClick={() => navigate('/book')}
               >
-                Find a Wash Nearby <ArrowRight className="w-4 h-4 ml-2" />
+                Find a Wash Near You <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
               <Button
                 size="lg"

@@ -416,9 +416,9 @@ export default function LandingPage() {
           </Link>
 
           <div className="hidden md:flex items-center gap-7 text-sm font-medium text-foreground/80">
-            <a href="#tiers" className="hover:text-foreground transition-colors duration-200">Business</a>
-            <a href="#operators" className="hover:text-foreground transition-colors duration-200">For Operators</a>
-            <a href="#car-owners" className="hover:text-foreground transition-colors duration-200">For Car Owners</a>
+            <a href="#tiers" className="hover:text-foreground transition-colors duration-200">Services</a>
+            <a href="#waitlist" className="hover:text-foreground transition-colors duration-200">Loyalty</a>
+            <Link to="/register?role=owner" className="hover:text-foreground transition-colors duration-200">Car Wash Owners</Link>
             <Link to="/roadmap" className="hover:text-foreground transition-colors duration-200">Roadmap</Link>
           </div>
 

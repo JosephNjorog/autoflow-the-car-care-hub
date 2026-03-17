@@ -407,6 +407,83 @@ async function handleById(req: VercelRequest, res: VercelResponse, id: string) {
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
+// ── POST /api/bookings/guest ──────────────────────────────────────────────────
+async function handleGuestBooking(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const { serviceId, locationId, date, time, paymentMethod, paymentTiming, guestName, guestPhone, guestEmail } = req.body;
+  if (!serviceId || !locationId || !date || !time || !paymentMethod || !guestPhone) {
+    return res.status(400).json({ error: 'serviceId, locationId, date, time, paymentMethod and guestPhone are required' });
+  }
+
+  // Lazy migrations
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_timing TEXT DEFAULT 'now'`.catch(() => {});
+  await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS mpesa_checkout_request_id TEXT`.catch(() => {});
+
+  const [service] = await sql`SELECT id, name, price, owner_id FROM services WHERE id = ${serviceId} AND is_active = true`;
+  if (!service) return res.status(400).json({ error: 'Service not found or unavailable' });
+
+  const [location] = await sql`SELECT id, name, owner_id FROM locations WHERE id = ${locationId} AND is_active = true`;
+  if (!location) return res.status(400).json({ error: 'Location not found or unavailable' });
+
+  // Find or create a minimal guest user account
+  let customerId: string;
+  const nameParts = (guestName || 'Guest').split(' ');
+  const firstName = nameParts[0];
+  const lastName  = nameParts.slice(1).join(' ') || '';
+
+  if (guestEmail) {
+    const [existing] = await sql`SELECT id FROM users WHERE email = ${guestEmail}`;
+    if (existing) {
+      customerId = existing.id as string;
+    } else {
+      const [newUser] = await sql`
+        INSERT INTO users (first_name, last_name, email, phone, role, is_verified, password_hash)
+        VALUES (${firstName}, ${lastName}, ${guestEmail}, ${guestPhone}, 'customer', false, '')
+        RETURNING id
+      `;
+      customerId = newUser.id as string;
+    }
+  } else {
+    const [existing] = await sql`SELECT id FROM users WHERE phone = ${guestPhone} AND role = 'customer' LIMIT 1`;
+    if (existing) {
+      customerId = existing.id as string;
+    } else {
+      const [newUser] = await sql`
+        INSERT INTO users (first_name, last_name, phone, role, is_verified, password_hash)
+        VALUES (${firstName}, ${lastName}, ${guestPhone}, 'customer', false, '')
+        RETURNING id
+      `;
+      customerId = newUser.id as string;
+    }
+  }
+
+  const [booking] = await sql`
+    INSERT INTO bookings (customer_id, service_id, location_id, scheduled_date, scheduled_time, payment_method, payment_timing)
+    VALUES (${customerId}, ${serviceId}, ${locationId}, ${date}, ${time}, ${paymentMethod}, ${paymentTiming || 'now'})
+    RETURNING id
+  `;
+
+  await sql`
+    INSERT INTO transactions (booking_id, customer_id, amount, method, status)
+    VALUES (${booking.id}, ${customerId}, ${service.price}, ${paymentMethod}, 'pending')
+  `;
+
+  // Notify location owner
+  await sql`
+    INSERT INTO notifications (user_id, title, message, type)
+    VALUES (${location.owner_id}, 'New Booking', ${'New booking for ' + (service.name as string) + ' from ' + (guestName || guestPhone)}, 'booking')
+  `.catch(() => {});
+
+  const [owner] = await sql`SELECT crypto_wallet FROM users WHERE id = ${location.owner_id}`.catch(() => [null]);
+
+  return res.status(201).json({
+    id: booking.id,
+    customerId,
+    ownerCryptoWallet: (owner as any)?.crypto_wallet || null,
+  });
+}
+
 // ── Router ────────────────────────────────────────────────────────────────────
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
@@ -415,6 +492,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const route = slug.join('/');
 
   if (slug.length === 0 || route === "index") return handleIndex(req, res);
+  if (slug[0] === 'guest') return handleGuestBooking(req, res);
   if (slug.length === 1) return handleById(req, res, slug[0]);
 
   return res.status(404).json({ error: 'Not found' });

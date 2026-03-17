@@ -19,6 +19,7 @@ import {
   connectInjectedWallet, isInjectedWalletAvailable, getInjectedWalletName,
   isMobileDevice, getMobileWalletDeepLinks,
 } from '@/lib/crypto';
+import ConnectWallet from '@/components/ConnectWallet';
 
 type ActiveTab = 'wallet' | 'prices' | 'history';
 type WalletTab = 'wdk' | 'injected';

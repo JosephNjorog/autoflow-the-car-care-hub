@@ -31,8 +31,8 @@ async function runMigrations() {
 // Customer-triggered STK push (pay-now before service)
 async function handleMpesaStk(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  const auth = requireAuth(req, res);
-  if (!auth) return;
+  // Auth is optional — guests identify via bookingId (UUID is unguessable)
+  const auth = optionalAuth(req);
 
   await runMigrations();
 
@@ -47,7 +47,8 @@ async function handleMpesaStk(req: VercelRequest, res: VercelResponse) {
     WHERE b.id = ${bookingId}
   `;
   if (!booking) return res.status(404).json({ error: 'Booking not found' });
-  if (auth.role === 'customer' && booking.customer_id !== auth.userId) {
+  // If authenticated, verify ownership; guests rely on the unguessable UUID
+  if (auth && auth.role === 'customer' && booking.customer_id !== auth.userId) {
     return res.status(403).json({ error: 'Not authorized' });
   }
   if (['captured', 'released'].includes(booking.payment_status as string)) {
@@ -326,8 +327,7 @@ async function handleMpesaCallback(req: VercelRequest, res: VercelResponse) {
 // ── GET /api/payments/status ──────────────────────────────────────────────────
 async function handleStatus(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-  const auth = requireAuth(req, res);
-  if (!auth) return;
+  // Auth optional — guests poll via unguessable bookingId UUID
   const { bookingId } = req.query;
   if (!bookingId) return res.status(400).json({ error: 'bookingId required' });
 

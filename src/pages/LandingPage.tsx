@@ -522,47 +522,46 @@ export default function LandingPage() {
         </motion.div>
       </div>
 
-      {/* ── Problem ─────────────────────────────────────────────────────────── */}
-      <section className="py-28 md:py-36">
+      {/* ── How it works ─────────────────────────────────────────────────────── */}
+      <section className="py-24 md:py-32">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: '-80px' }}
             variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
+            className="text-center mb-12"
           >
-            <motion.p variants={fadeUp} className="text-xs uppercase tracking-[0.15em] text-muted-foreground mb-5">
-              The Problem
+            <motion.p variants={fadeUp} className="text-xs uppercase tracking-[0.15em] text-muted-foreground mb-3">
+              How it works
             </motion.p>
-            <motion.h2
-              variants={fadeUp}
-              className="text-[clamp(2.5rem,6vw,5rem)] font-bold leading-[1.05] tracking-[-0.03em] text-foreground mb-5"
-            >
-              A massive market,<br />
-              <span className="text-muted-foreground font-light">completely underserved.</span>
+            <motion.h2 variants={fadeUp} className="text-[clamp(2rem,5vw,3.5rem)] font-bold tracking-[-0.03em] text-foreground">
+              Book in 3 simple steps
             </motion.h2>
-            <motion.p variants={fadeUp} className="text-base text-muted-foreground max-w-lg leading-relaxed mb-14">
-              Kenya's car wash industry is growing fast — but the infrastructure hasn't kept up. No digital payments, no service records, no loyalty programs.
-            </motion.p>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { stat: '10M+', label: 'Registered vehicles in Kenya' },
-                { stat: '40K+', label: 'Car wash businesses nationwide' },
-                { stat: '95%',  label: 'Still cash-only operations' },
-                { stat: '0',    label: 'With digital loyalty programs' },
-              ].map((s, i) => (
-                <motion.div
-                  key={i}
-                  variants={fadeUp}
-                  custom={i * 0.08}
-                  className="p-6 rounded-2xl border border-border bg-card"
-                >
-                  <p className="text-4xl md:text-5xl font-bold text-foreground tracking-tight mb-2">{s.stat}</p>
-                  <p className="text-sm text-muted-foreground leading-snug">{s.label}</p>
-                </motion.div>
-              ))}
-            </div>
           </motion.div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              { step: '1', icon: <MapPin className="w-6 h-6" />, title: 'Find a Wash Near You', desc: 'Choose your tier — Economy, Premium Economy, or First Class — and browse verified car washes in your area.' },
+              { step: '2', icon: <CheckCircle className="w-6 h-6" />, title: 'Pick Services & Book', desc: 'Select the services you want, pick a date and time, then checkout with just your phone number.' },
+              { step: '3', icon: <Award className="w-6 h-6" />, title: 'Pay & Earn Points', desc: 'Pay with M-Pesa or crypto. Payment is held in escrow and released after the service. Earn 1 AP point per KES 10 spent.' },
+            ].map((s, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.12, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                className="p-6 rounded-2xl border border-border bg-card"
+              >
+                <div className="w-12 h-12 rounded-xl bg-foreground/5 border border-border flex items-center justify-center mb-4 text-foreground">
+                  {s.icon}
+                </div>
+                <p className="text-xs text-muted-foreground mb-1">Step {s.step}</p>
+                <h3 className="font-semibold text-foreground mb-2">{s.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 

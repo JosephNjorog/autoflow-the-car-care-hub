@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql, rawSql } from '../_lib/db';
-import { requireAuth } from '../_lib/auth';
+import { requireAuth, optionalAuth } from '../_lib/auth';
 import { handleCors } from '../_lib/cors';
 import {
   getMpesaAccessToken,

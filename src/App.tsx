@@ -165,6 +165,7 @@ const App = () => {
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
+    </WagmiProvider>
   </ThemeProvider>
   );
 };

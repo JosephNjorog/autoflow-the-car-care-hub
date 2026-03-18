@@ -14,10 +14,12 @@ import { createAppKit } from '@reown/appkit';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
 import { avalanche, avalancheFuji } from '@reown/appkit/networks';
 
-const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as string | undefined;
-
-// Fallback project ID — replace with your own from cloud.reown.com
-const PROJECT_ID = projectId || 'b56e18d47c72ab683b10814fe9495694';
+// Vite exposes only VITE_-prefixed vars to the browser.
+// If you have NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID, add an alias:
+//   VITE_WALLETCONNECT_PROJECT_ID=<same value>  in .env.local
+const PROJECT_ID =
+  (import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as string | undefined) ||
+  '1d338d17086b9eebc7f0b3989b9ee422';
 
 const USE_TESTNET = import.meta.env.VITE_USE_TESTNET === 'true';
 const networks = USE_TESTNET

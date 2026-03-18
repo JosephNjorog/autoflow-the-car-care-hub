@@ -16,39 +16,48 @@ function mapService(s: Record<string, unknown>) {
 
 // ── GET /api/services/templates ───────────────────────────────────────────────
 // Returns all global service templates. Creates and seeds the table on first call.
+// ── Service templates organised by tier (Economy → Premium Economy → First Class)
+// Economy:        KES 300–1,000   (basic wash add-ons welcome)
+// Premium Economy: KES 1,050–2,000 (wash + wax, interior polish, glass clean)
+// First Class:    KES 2,050+      (full detail, coatings, mechanical checks)
 const SEED_TEMPLATES = [
-  // Exterior Wash
-  { name: 'Exterior Rinse & Wash',    description: 'Basic soap wash and rinse of the full exterior.', price: 300,   duration: 20, category: 'Exterior Wash' },
-  { name: 'Express Exterior Wash',    description: 'Quick hand wash with microfiber dry.',              price: 500,   duration: 30, category: 'Exterior Wash' },
-  { name: 'Hand Wash & Shine',        description: 'Thorough hand wash, wheel rinse, and microfiber dry.', price: 700, duration: 40, category: 'Exterior Wash' },
-  { name: 'Undercarriage Wash',       description: 'High-pressure rinse of the undercarriage to remove mud and debris.', price: 500, duration: 20, category: 'Exterior Wash' },
-  // Interior Clean
-  { name: 'Interior Vacuum',          description: 'Full interior vacuum including seats, floor mats, and boot.', price: 400, duration: 30, category: 'Interior Clean' },
-  { name: 'Interior Wipe Down',       description: 'Dashboard, door panels, and surface wipe with vacuum.', price: 600, duration: 45, category: 'Interior Clean' },
-  { name: 'Interior Deep Clean',      description: 'Complete interior clean: seats, carpets, dashboard, vents, and boot.', price: 1500, duration: 90, category: 'Interior Clean' },
-  { name: 'Odor Elimination',         description: 'Ozone or steam treatment to neutralise odours inside the cabin.', price: 1500, duration: 60, category: 'Interior Clean' },
-  // Combined Packages
-  { name: 'Basic Wash & Vacuum',      description: 'Exterior wash plus a quick interior vacuum.',              price: 700,  duration: 45, category: 'Packages' },
-  { name: 'Standard Wash',            description: 'Hand wash, interior vacuum, and dashboard wipe.',          price: 1000, duration: 60, category: 'Packages' },
-  { name: 'Premium Wash',             description: 'Full hand wash, complete interior clean, and tyre shine.', price: 1500, duration: 75, category: 'Packages' },
-  { name: 'Executive Wash',           description: 'Full exterior detail, complete interior, finishing wax, and tyre dressing.', price: 2000, duration: 90, category: 'Packages' },
-  // Polish & Protection
-  { name: 'Exterior Polish',          description: 'Machine or hand polish to remove light swirl marks and restore shine.', price: 3000, duration: 120, category: 'Polish & Protection' },
-  { name: 'Wax Application',          description: 'Carnauba wax coat for a deep shine and paint protection.',  price: 2000, duration: 60, category: 'Polish & Protection' },
-  { name: 'Paint Correction',         description: 'Multi-stage decontamination and correction for deeper scratches and oxidation.', price: 8000, duration: 240, category: 'Polish & Protection' },
-  { name: 'Ceramic Coating',          description: 'Long-lasting nano-ceramic paint protection layer.',          price: 15000, duration: 300, category: 'Polish & Protection' },
-  { name: 'Paint Protection Film',    description: 'Self-healing PPF applied to high-impact panels.',            price: 20000, duration: 360, category: 'Polish & Protection' },
-  // Full Detailing
-  { name: 'Full Detail',              description: 'Comprehensive interior and exterior detailing service.',      price: 5000, duration: 180, category: 'Full Detail' },
-  // Engine & Wheels
-  { name: 'Engine Bay Clean',         description: 'Safe degreasing and rinse of the engine bay.',               price: 1500, duration: 60, category: 'Engine & Wheels' },
-  { name: 'Tyre & Wheel Clean',       description: 'Brake dust removal, wheel scrub, and tyre shine.',           price: 500,  duration: 20, category: 'Engine & Wheels' },
-  { name: 'Alloy Wheel Polish',       description: 'Deep clean and machine polish of alloy wheels.',             price: 1500, duration: 45, category: 'Engine & Wheels' },
-  // Glass & Upholstery
-  { name: 'Windscreen Treatment',     description: 'Water-repellent coating applied to the windscreen.',         price: 500,  duration: 20, category: 'Glass & Upholstery' },
-  { name: 'Upholstery Shampoo',       description: 'Deep shampoo clean of fabric seats and floor carpets.',      price: 2000, duration: 90, category: 'Glass & Upholstery' },
-  { name: 'Leather Conditioning',     description: 'Clean, condition, and protect genuine leather seats.',        price: 2000, duration: 75, category: 'Glass & Upholstery' },
-  { name: 'Window Tinting',           description: 'UV-protective window tint film applied to side and rear glass.', price: 5000, duration: 120, category: 'Glass & Upholstery' },
+  // ── Economy ──────────────────────────────────────────────────────────────────
+  { name: 'Basic Foam Wash',          description: 'Full-body foam application and rinse.',                         price: 300,   duration: 20, category: 'Economy' },
+  { name: 'Pressure Rinse',           description: 'High-pressure water rinse to remove loose dirt.',               price: 350,   duration: 15, category: 'Economy' },
+  { name: 'Tire Wash',                description: 'Scrub and rinse of all four tires.',                            price: 400,   duration: 20, category: 'Economy' },
+  { name: 'Rim Clean',                description: 'Brake dust and grime removal from wheel rims.',                 price: 400,   duration: 20, category: 'Economy' },
+  { name: 'Hand Dry',                 description: 'Microfiber hand dry of the full exterior after wash.',          price: 350,   duration: 15, category: 'Economy' },
+  { name: 'Light Interior Wipe',      description: 'Quick wipe of dashboard and door panels.',                      price: 400,   duration: 20, category: 'Economy' },
+  { name: 'Dashboard Dust Removal',   description: 'Dusting of dashboard, vents, and console surfaces.',            price: 350,   duration: 15, category: 'Economy' },
+  { name: 'Floor Mat Shake',          description: 'Remove and shake out all floor mats.',                          price: 300,   duration: 10, category: 'Economy' },
+  // Economy add-ons
+  { name: 'Tire Shine',               description: 'Dressing applied to tires for a clean glossy finish.',          price: 200,   duration: 10, category: 'Economy' },
+  { name: 'Air Freshener',            description: 'Long-lasting cabin air freshener installed.',                    price: 150,   duration:  5, category: 'Economy' },
+  { name: 'Quick Vacuum',             description: 'Rapid vacuum of front and rear floor carpets.',                  price: 300,   duration: 15, category: 'Economy' },
+
+  // ── Premium Economy ───────────────────────────────────────────────────────────
+  { name: 'Foam Wash + Wax',          description: 'Full foam wash followed by a protective carnauba wax coat.',    price: 1200,  duration: 60, category: 'Premium Economy' },
+  { name: 'Tire Shine + Rim Polish',  description: 'Tire dressing plus machine polish of alloy rims.',              price: 1100,  duration: 45, category: 'Premium Economy' },
+  { name: 'Door Jamb Cleaning',       description: 'Deep clean of door jambs and hinges.',                          price: 1050,  duration: 30, category: 'Premium Economy' },
+  { name: 'Full Vacuum',              description: 'Thorough vacuum of seats, carpets, boot, and all crevices.',    price: 1100,  duration: 40, category: 'Premium Economy' },
+  { name: 'Dashboard Polish',         description: 'Clean and UV-protective polish on dashboard and trim.',         price: 1200,  duration: 35, category: 'Premium Economy' },
+  { name: 'Window Cleaning',          description: 'Streak-free clean of all interior and exterior glass.',         price: 1050,  duration: 30, category: 'Premium Economy' },
+  { name: 'Seat Wipe / Leather Wipe', description: 'Wipe-down and condition of fabric or leather seating surfaces.', price: 1500, duration: 45, category: 'Premium Economy' },
+  { name: 'Interior Fragrance',       description: 'Premium cabin fragrance treatment for a lasting fresh scent.',  price: 1100,  duration: 15, category: 'Premium Economy' },
+
+  // ── First Class ───────────────────────────────────────────────────────────────
+  { name: 'Full Interior Detailing',  description: 'Complete interior deep clean: seats, carpets, dashboard, vents, boot, and door panels.', price: 3500, duration: 150, category: 'First Class' },
+  { name: 'Engine Bay Cleaning',      description: 'Safe degreasing and pressure rinse of the full engine bay.',   price: 2500,  duration: 60, category: 'First Class' },
+  { name: 'Ceramic Coating',          description: 'Long-lasting nano-ceramic paint protection layer with 1-year warranty.', price: 15000, duration: 300, category: 'First Class' },
+  { name: 'Paint Correction',         description: 'Multi-stage machine polish to remove swirls, scratches, and oxidation.', price: 8000, duration: 240, category: 'First Class' },
+  { name: 'Headlight Restoration',    description: 'Polish and UV-seal dull or yellowed headlight lenses.',        price: 2500,  duration: 60, category: 'First Class' },
+  { name: 'Oil Change',               description: 'Engine oil and filter replacement using manufacturer-spec oil.', price: 3000, duration: 45, category: 'First Class' },
+  { name: 'Brake Inspection',         description: 'Visual and functional check of brake pads, discs, and fluid level.', price: 2500, duration: 40, category: 'First Class' },
+  { name: 'Tire Rotation',            description: 'Rotate all four tires to even out tread wear.',                 price: 2500,  duration: 40, category: 'First Class' },
+  { name: 'Paint Protection Film',    description: 'Self-healing PPF applied to high-impact panels (bonnet, fenders, mirrors).', price: 20000, duration: 360, category: 'First Class' },
+  { name: 'Upholstery Shampoo',       description: 'Deep-shampoo clean of fabric seats and floor carpets.',        price: 3500,  duration: 90, category: 'First Class' },
+  { name: 'Odor Removal',             description: 'Ozone or steam treatment to permanently neutralise cabin odours.', price: 2500, duration: 60, category: 'First Class' },
+  { name: 'Full Detail',              description: 'Comprehensive interior and exterior detailing — the works.',    price: 5000,  duration: 180, category: 'First Class' },
 ];
 
 async function handleTemplates(req: VercelRequest, res: VercelResponse) {

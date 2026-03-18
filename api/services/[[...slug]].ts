@@ -76,15 +76,25 @@ async function handleTemplates(req: VercelRequest, res: VercelResponse) {
     )
   `;
 
-  // Seed if empty
-  const [{ count }] = await sql`SELECT COUNT(*)::int AS count FROM service_templates` as [{ count: number }];
-  if (count === 0) {
+  // Reseed when templates don't match the current tier architecture.
+  // Bump this version string whenever SEED_TEMPLATES changes.
+  const TEMPLATE_VERSION = 'v2-tier-arch-2026';
+  await sql`
+    CREATE TABLE IF NOT EXISTS _meta (key TEXT PRIMARY KEY, value TEXT)
+  `;
+  const [meta] = await sql`SELECT value FROM _meta WHERE key = 'template_version'`;
+  if (!meta || meta.value !== TEMPLATE_VERSION) {
+    await sql`TRUNCATE service_templates`;
     for (const t of SEED_TEMPLATES) {
       await sql`
         INSERT INTO service_templates (name, description, default_price, default_duration, category)
         VALUES (${t.name}, ${t.description}, ${t.price}, ${t.duration}, ${t.category})
       `;
     }
+    await sql`
+      INSERT INTO _meta (key, value) VALUES ('template_version', ${TEMPLATE_VERSION})
+      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+    `;
   }
 
   const templates = await sql`SELECT * FROM service_templates ORDER BY category, default_price`;

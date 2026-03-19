@@ -157,10 +157,9 @@ export default function GuestBook() {
     );
   }, [locations, searchQuery]);
 
-  // Pricing: sum of selected services + 10% platform fee
+  // Customer pays the service price as-is. AutoFlow's 10% is deducted from the owner payout on the backend.
   const servicesTotal  = selectedServices.reduce((s, svc) => s + parseFloat(svc.price), 0);
-  const platformFee    = Math.round(servicesTotal * 0.10);
-  const totalAmount    = servicesTotal + platformFee;
+  const totalAmount    = servicesTotal;
   const usdAmount      = totalAmount ? (totalAmount / conversionRate).toFixed(2) : '0';
   const pointsEarned   = calcPoints(servicesTotal);
   const tierInfo       = TIERS.find(t => t.id === selectedTier);

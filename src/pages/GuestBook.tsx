@@ -274,11 +274,7 @@ export default function GuestBook() {
                   <span className="text-foreground">KES {parseFloat(s.price).toLocaleString()}</span>
                 </div>
               ))}
-              <div className="border-t border-border pt-1.5 flex justify-between text-sm">
-                <span className="text-muted-foreground">Platform fee (10%)</span>
-                <span className="text-foreground">KES {platformFee.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between font-bold">
+              <div className="flex justify-between font-bold border-t border-border pt-1.5">
                 <span className="text-foreground">Total paid</span>
                 <span className="text-foreground">KES {totalAmount.toLocaleString()}</span>
               </div>
@@ -378,11 +374,7 @@ export default function GuestBook() {
                   <span className="text-foreground">KES {parseFloat(s.price).toLocaleString()}</span>
                 </div>
               ))}
-              <div className="flex justify-between text-sm pt-1 border-t border-border">
-                <span className="text-muted-foreground">Platform fee (10%)</span>
-                <span className="text-foreground">KES {platformFee.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between pt-1">
+              <div className="flex justify-between pt-1 border-t border-border">
                 <span className="font-semibold text-foreground">Total</span>
                 <span className="font-bold text-lg text-foreground">KES {totalAmount.toLocaleString()}</span>
               </div>
@@ -570,7 +562,7 @@ export default function GuestBook() {
               <div className="max-w-2xl mx-auto">
                 <div className="flex items-center justify-between mb-2">
                   <div>
-                    <p className="text-xs text-muted-foreground">{selectedServices.length} service{selectedServices.length > 1 ? 's' : ''} · +10% fee</p>
+                    <p className="text-xs text-muted-foreground">{selectedServices.length} service{selectedServices.length > 1 ? 's' : ''} selected</p>
                     <p className="text-lg font-bold text-foreground">KES {totalAmount.toLocaleString()}</p>
                   </div>
                   <Button size="lg" disabled={!selectedDate || !selectedTime} onClick={() => setStep('checkout')}>

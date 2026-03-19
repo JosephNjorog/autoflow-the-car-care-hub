@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import {
   MapPin, Star, Clock, Droplets, Search, ChevronRight, ArrowLeft,
-  Phone, Wallet, Zap, CheckCircle, Loader2, Award, Crown, Car,
-  ArrowRight, Shield, CreditCard, UserPlus, Plus, Minus, X,
+  Phone, Wallet, CheckCircle, Loader2, Award,
+  ArrowRight, Shield, CreditCard, UserPlus, X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -110,7 +110,7 @@ export default function GuestBook() {
   const [guestPhone, setGuestPhone] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
 
-  const [bookingResults, setBookingResults] = useState<{ id: string }[]>([]);
+  const [, setBookingResults] = useState<{ id: string }[]>([]);
   const [isBooking, setIsBooking]   = useState(false);
   const [pollCount, setPollCount]   = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
